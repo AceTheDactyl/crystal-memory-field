@@ -93,7 +93,7 @@ const MemoryParticle = React.memo(function MemoryParticle({ memory, onPress, isO
 
   const x = (memory.x / 100) * SCREEN_WIDTH;
   const y = (memory.y / 100) * SCREEN_HEIGHT;
-  const size = memory.crystallized ? memory.size * 1.8 : memory.size;
+  const size = memory.crystallized ? memory.size * 2.2 : memory.size;
   
   // Enhanced visual feedback based on connections and harmonic frequency
   const connectionCount = memory.connections.length;
@@ -117,7 +117,7 @@ const MemoryParticle = React.memo(function MemoryParticle({ memory, onPress, isO
               }),
             },
           ],
-          opacity: memory.crystallized ? 1 : 0.7,
+          opacity: memory.crystallized ? 1 : 0.6,
         },
       ]}
     >
@@ -129,7 +129,7 @@ const MemoryParticle = React.memo(function MemoryParticle({ memory, onPress, isO
         <LinearGradient
           colors={
             memory.crystallized
-              ? ['#06b6d4', '#3b82f6', '#8b5cf6']
+              ? ['#06b6d4', '#3b82f6', '#8b5cf6', '#f59e0b'] // Added gold
               : [
                   `rgba(96, 165, 250, ${0.2 + connectionCount * 0.05})`,
                   `rgba(147, 51, 234, ${0.2 + harmonicIntensity * 0.3})`
@@ -158,7 +158,9 @@ const MemoryParticle = React.memo(function MemoryParticle({ memory, onPress, isO
                   }
                 ]}
               />
-              <Text style={styles.content}>{memory.content}</Text>
+              <Text style={[styles.content, { fontSize: memory.crystallized ? 12 : 10 }]}>
+                {memory.content}
+              </Text>
             </>
           )}
           

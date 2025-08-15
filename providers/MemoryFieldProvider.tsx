@@ -134,7 +134,8 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
     const now = Date.now();
     if (now - lastPatternCheck.current > 1000) { // Check once per second
       const crystallizedCount = memories.filter(m => m.crystallized).length;
-      if (crystallizedCount >= 8 && crystalPattern === 'free') {
+      if (crystallizedCount >= 5 && crystalPattern === 'free') { // Lower threshold
+        console.log(`🌟 Sacred geometry activated! ${crystallizedCount} crystals formed`);
         setCrystalPattern('sacred');
         lastPatternCheck.current = now;
       }
@@ -242,73 +243,67 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
                 const centerX = 50;
                 const centerY = 50;
                 const totalMemories = prevMemories.length;
+                const crystallizedCount = prevMemories.filter(m => m.crystallized).length;
                 
-                // Primary circle formation with slower rotation for stability
-                const primaryAngle = (idx / totalMemories) * Math.PI * 2;
-                const primaryRadius = 28 + Math.sin(frameCount * 0.005) * 5; // Slower, smaller oscillation
-                const primaryTargetX = centerX + Math.cos(primaryAngle + frameCount * 0.001) * primaryRadius;
-                const primaryTargetY = centerY + Math.sin(primaryAngle + frameCount * 0.001) * primaryRadius;
-                
-                // Secondary nested patterns based on harmonic frequency
-                const harmonicLayer = Math.floor(memory.harmonic / 300) % 3;
-                let secondaryTargetX = primaryTargetX;
-                let secondaryTargetY = primaryTargetY;
-                
-                if (harmonicLayer === 1) {
-                  // Inner ring for mid-frequency harmonics
-                  const innerRadius = 18 + Math.cos(frameCount * 0.008) * 3;
-                  const innerAngle = primaryAngle * 1.618 + frameCount * 0.002; // Golden ratio, slower
-                  secondaryTargetX = centerX + Math.cos(innerAngle) * innerRadius;
-                  secondaryTargetY = centerY + Math.sin(innerAngle) * innerRadius;
-                } else if (harmonicLayer === 2) {
-                  // Outer ring for high-frequency harmonics
-                  const outerRadius = 38 + Math.sin(frameCount * 0.004) * 8;
-                  const outerAngle = primaryAngle * 0.618 - frameCount * 0.001;
-                  secondaryTargetX = centerX + Math.cos(outerAngle) * outerRadius;
-                  secondaryTargetY = centerY + Math.sin(outerAngle) * outerRadius;
-                }
-                
-                // Blend between primary and secondary targets based on crystallization in area
-                const nearbyCount = prevMemories.filter(other => {
-                  const dist = Math.hypot(other.x - memory.x, other.y - memory.y);
-                  return dist < 25 && other.crystallized;
-                }).length;
-                
-                const blendFactor = Math.min(1, nearbyCount / 4);
-                const finalTargetX = primaryTargetX * (1 - blendFactor) + secondaryTargetX * blendFactor;
-                const finalTargetY = primaryTargetY * (1 - blendFactor) + secondaryTargetY * blendFactor;
-                
-                // Calculate distance to target for settling behavior
-                const distToTarget = Math.hypot(finalTargetX - memory.x, finalTargetY - memory.y);
-                
-                // Much stronger sacred geometry attraction with progressive scaling
-                let geometryStrength = 0.015 * (1 + globalCoherenceRef.current * 3);
-                
-                // Progressive strength increase for better settling
-                if (distToTarget < 2) {
-                  geometryStrength *= 8; // Very strong when very close
-                } else if (distToTarget < 5) {
-                  geometryStrength *= 5; // Strong when close
-                } else if (distToTarget < 10) {
-                  geometryStrength *= 3; // Moderate when approaching
-                } else if (distToTarget < 20) {
-                  geometryStrength *= 2; // Gentle when far
-                }
-                
-                // Apply the force
-                newMem.vx += (finalTargetX - memory.x) * geometryStrength;
-                newMem.vy += (finalTargetY - memory.y) * geometryStrength;
-                
-                // Progressive damping for settling
-                if (distToTarget < 1) {
-                  newMem.vx *= 0.7; // Very strong damping when at target
-                  newMem.vy *= 0.7;
-                } else if (distToTarget < 3) {
-                  newMem.vx *= 0.8; // Strong damping when close
-                  newMem.vy *= 0.8;
-                } else if (distToTarget < 8) {
-                  newMem.vx *= 0.9; // Moderate damping when approaching
-                  newMem.vy *= 0.9;
+                // Only apply sacred geometry if we have enough crystallized memories
+                if (crystallizedCount >= 3) {
+                  // Primary circle formation with much slower rotation for stability
+                  const primaryAngle = (idx / totalMemories) * Math.PI * 2;
+                  const primaryRadius = 25 + Math.sin(frameCount * 0.002) * 2; // Much slower, smaller oscillation
+                  const primaryTargetX = centerX + Math.cos(primaryAngle + frameCount * 0.0005) * primaryRadius;
+                  const primaryTargetY = centerY + Math.sin(primaryAngle + frameCount * 0.0005) * primaryRadius;
+                  
+                  // Secondary nested patterns based on harmonic frequency
+                  const harmonicLayer = Math.floor(memory.harmonic / 300) % 3;
+                  let finalTargetX = primaryTargetX;
+                  let finalTargetY = primaryTargetY;
+                  
+                  if (harmonicLayer === 1) {
+                    // Inner ring for mid-frequency harmonics
+                    const innerRadius = 15 + Math.cos(frameCount * 0.003) * 1;
+                    const innerAngle = primaryAngle * 1.618 + frameCount * 0.0008; // Golden ratio, much slower
+                    finalTargetX = centerX + Math.cos(innerAngle) * innerRadius;
+                    finalTargetY = centerY + Math.sin(innerAngle) * innerRadius;
+                  } else if (harmonicLayer === 2) {
+                    // Outer ring for high-frequency harmonics
+                    const outerRadius = 35 + Math.sin(frameCount * 0.002) * 3;
+                    const outerAngle = primaryAngle * 0.618 - frameCount * 0.0003;
+                    finalTargetX = centerX + Math.cos(outerAngle) * outerRadius;
+                    finalTargetY = centerY + Math.sin(outerAngle) * outerRadius;
+                  }
+                  
+                  // Calculate distance to target for settling behavior
+                  const distToTarget = Math.hypot(finalTargetX - memory.x, finalTargetY - memory.y);
+                  
+                  // Much stronger sacred geometry attraction with progressive scaling
+                  let geometryStrength = 0.008 * (1 + globalCoherenceRef.current * 2);
+                  
+                  // Progressive strength increase for better settling
+                  if (distToTarget < 1) {
+                    geometryStrength *= 15; // Very strong when very close
+                  } else if (distToTarget < 3) {
+                    geometryStrength *= 8; // Strong when close
+                  } else if (distToTarget < 8) {
+                    geometryStrength *= 4; // Moderate when approaching
+                  } else if (distToTarget < 15) {
+                    geometryStrength *= 2; // Gentle when far
+                  }
+                  
+                  // Apply the force
+                  newMem.vx += (finalTargetX - memory.x) * geometryStrength;
+                  newMem.vy += (finalTargetY - memory.y) * geometryStrength;
+                  
+                  // Progressive damping for settling
+                  if (distToTarget < 0.5) {
+                    newMem.vx *= 0.5; // Very strong damping when at target
+                    newMem.vy *= 0.5;
+                  } else if (distToTarget < 2) {
+                    newMem.vx *= 0.7; // Strong damping when close
+                    newMem.vy *= 0.7;
+                  } else if (distToTarget < 5) {
+                    newMem.vx *= 0.85; // Moderate damping when approaching
+                    newMem.vy *= 0.85;
+                  }
                 }
               }
               
@@ -404,6 +399,7 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
   }, [isPaused, memories.length]); // Stable dependencies only
 
   const handleObservation = useCallback((memoryId: number) => {
+    // Allow crystallization in void mode or when observing
     if (!isObserving && !voidModeRef.current) return;
     
     if (voidModeRef.current) {
@@ -413,10 +409,12 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
     setMemories(prevMemories => 
       prevMemories.map(mem => {
         if (mem.id === memoryId) {
+          console.log(`🔮 Crystallizing memory: ${mem.content} (${mem.archetype})`);
           return { 
             ...mem, 
             crystallized: true,
-            crystallizationTime: Date.now()
+            crystallizationTime: Date.now(),
+            coherenceLevel: 0.1 // Start with some coherence
           };
         }
         
@@ -425,18 +423,22 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
         
         const dist = Math.hypot(mem.x - source.x, mem.y - source.y);
         const harmonicDiff = Math.abs(mem.harmonic - source.harmonic);
-        const harmonicResonance = harmonicDiff > 0 ? 1 - Math.min(1, harmonicDiff / 1000) : 1;
+        const harmonicResonance = harmonicDiff > 0 ? 1 - Math.min(1, harmonicDiff / 800) : 1; // Increased sensitivity
         
-        if (dist < 20 * harmonicResonance && Math.random() < harmonicResonance * 0.5) {
+        // Enhanced cascade crystallization
+        if (dist < 25 * harmonicResonance && Math.random() < harmonicResonance * 0.7) {
+          console.log(`✨ Cascade crystallization: ${mem.content}`);
           return { 
             ...mem, 
             crystallized: true,
-            crystallizationTime: Date.now() + dist * 10
+            crystallizationTime: Date.now() + dist * 5, // Faster cascade
+            coherenceLevel: 0.05
           };
         }
         
-        if (dist < 30) {
-          return { ...mem, vx: mem.vx * 0.7, vy: mem.vy * 0.7 };
+        // Slow down nearby memories
+        if (dist < 35) {
+          return { ...mem, vx: mem.vx * 0.8, vy: mem.vy * 0.8 };
         }
         return mem;
       })
