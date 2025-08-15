@@ -178,7 +178,7 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
 
   // Animation loop with enhanced geometry and physics
   useEffect(() => {
-    if (isPaused || memories.length === 0) {
+    if (memories.length === 0) {
       isInitialized.current = false;
       return;
     }
@@ -227,7 +227,8 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
       }
       
       // Update memories with enhanced physics and sacred geometry (less frequently)
-      if (frameCount % 2 === 0) {
+      // Only update memories if not paused
+      if (frameCount % 2 === 0 && !isPaused) {
         setMemories(prevMemories => {
           const currentBreath = Math.sin(Date.now() * 0.0015) * 0.5 + 0.5;
           const currentTime = Date.now();
@@ -444,7 +445,8 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
       }
       
       // Update pulses less frequently
-      if (frameCount % 5 === 0) {
+      // Only update pulses if not paused
+      if (frameCount % 5 === 0 && !isPaused) {
         setPulses(prev => {
           if (prev.length === 0) return prev;
           return prev
