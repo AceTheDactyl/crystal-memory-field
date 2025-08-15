@@ -299,7 +299,7 @@ export default function CrystalMemoryField() {
             >
               <Sparkles size={24} color={crystalPattern === 'sacred' ? '#ffffff' : '#f59e0b'} />
               <Text style={[styles.controlText, crystalPattern === 'sacred' && styles.controlTextActive]}>
-                Sacred
+                {crystalPattern === 'sacred' ? 'Sacred ✨' : 'Sacred'}
               </Text>
             </TouchableOpacity>
 
@@ -343,10 +343,16 @@ export default function CrystalMemoryField() {
               },
             ]}
           >
-            <Text style={styles.coherenceLabel}>Global Coherence</Text>
+            <Text style={styles.coherenceLabel}>
+              {crystalPattern === 'sacred' ? '✨ Sacred Geometry Active' : 'Global Coherence'}
+            </Text>
             <View style={styles.coherenceBar}>
               <LinearGradient
-                colors={['#3b82f6', '#06b6d4']}
+                colors={
+                  crystalPattern === 'sacred' 
+                    ? ['#f59e0b', '#fbbf24', '#f59e0b']
+                    : ['#3b82f6', '#06b6d4']
+                }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={[
@@ -357,6 +363,7 @@ export default function CrystalMemoryField() {
             </View>
             <Text style={styles.coherenceValue}>
               {(globalCoherence * 100).toFixed(1)}%
+              {crystalPattern === 'sacred' && ' - Settling...'}
             </Text>
           </Animated.View>
         </>
