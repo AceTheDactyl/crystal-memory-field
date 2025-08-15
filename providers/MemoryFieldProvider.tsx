@@ -158,7 +158,7 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
         lastPatternCheck.current = now;
       }
     }
-  }, [memories, crystalPattern])
+  }, [memories, crystalPattern]);
 
   // Call check function in animation loop instead of useEffect
   useEffect(() => {
