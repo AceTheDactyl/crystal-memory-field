@@ -67,6 +67,8 @@ export default function CrystalMemoryField() {
     releaseAll,
     createPulse,
   } = useMemoryField();
+  
+  console.log(`🎯 CrystalMemoryField render - crystalPattern: ${crystalPattern}, crystallized: ${memories.filter(m => m.crystallized).length}`);
 
   const [uiVisible, setUiVisible] = useState(true);
   const [showControls, setShowControls] = useState(false);
@@ -312,10 +314,17 @@ export default function CrystalMemoryField() {
                   backgroundColor: 'rgba(245, 158, 11, 0.8)',
                   borderWidth: 1,
                   borderColor: 'rgba(251, 191, 36, 0.6)',
+                  shadowColor: '#fbbf24',
+                  shadowOffset: { width: 0, height: 0 },
+                  shadowOpacity: 0.8,
+                  shadowRadius: 10,
+                  elevation: 8,
                 },
               ]}
               onPress={() => {
-                setCrystalPattern(crystalPattern === 'sacred' ? 'free' : 'sacred');
+                const newPattern = crystalPattern === 'sacred' ? 'free' : 'sacred';
+                console.log(`🎯 Manual sacred geometry toggle: ${crystalPattern} -> ${newPattern}`);
+                setCrystalPattern(newPattern);
                 if (Platform.OS !== 'web') {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 }
@@ -327,6 +336,9 @@ export default function CrystalMemoryField() {
                 crystalPattern === 'sacred' && {
                   color: '#ffffff',
                   fontWeight: '700',
+                  textShadowColor: 'rgba(251, 191, 36, 0.8)',
+                  textShadowOffset: { width: 0, height: 0 },
+                  textShadowRadius: 5,
                 }
               ]}>
                 {crystalPattern === 'sacred' ? '🌟 SACRED' : 'Sacred'}

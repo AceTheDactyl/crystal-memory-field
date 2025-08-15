@@ -1,13 +1,15 @@
 import React, { useEffect, useRef, useMemo } from 'react';
-import { View, StyleSheet, Animated, Dimensions } from 'react-native';
+import { View, StyleSheet, Animated, Dimensions, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Line } from 'react-native-svg';
+import Svg, { Line, Circle } from 'react-native-svg';
 import { useMemoryField } from '@/providers/MemoryFieldProvider';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function WaveField() {
-  const { memories, pulses, voidMode } = useMemoryField();
+  const { memories, pulses, voidMode, crystalPattern } = useMemoryField();
+  
+  console.log(`🌊 WaveField render - crystalPattern: ${crystalPattern}, memories: ${memories.length}`);
   const waveAnims = useRef(
     Array.from({ length: 3 }, () => new Animated.Value(0))
   ).current;
@@ -166,6 +168,10 @@ export default function WaveField() {
             const pulsePhase = (index * 0.1) % (Math.PI * 2);
             const pulseIntensity = Math.sin(Date.now() * 0.001 + pulsePhase) * 0.3 + 0.7;
             
+            // Sacred geometry enhancement
+            const sacredBoost = crystalPattern === 'sacred' ? 1.5 : 1;
+            const sacredOpacity = crystalPattern === 'sacred' ? 0.9 : 0.6;
+            
             return (
               <Line
                 key={index}
@@ -174,8 +180,8 @@ export default function WaveField() {
                 x2={connection.to.x}
                 y2={connection.to.y}
                 stroke={harmonicColor}
-                strokeWidth={Math.max(1, connection.strength * 3 * pulseIntensity)}
-                strokeOpacity={Math.min(0.9, connection.strength * 0.8 * pulseIntensity)}
+                strokeWidth={Math.max(1, connection.strength * 3 * pulseIntensity * sacredBoost)}
+                strokeOpacity={Math.min(sacredOpacity, connection.strength * 0.8 * pulseIntensity)}
                 strokeDasharray={voidMode ? "3,3" : undefined}
               />
             );
@@ -216,11 +222,73 @@ export default function WaveField() {
         );
       })}
 
+      {/* Sacred geometry overlay */}
+      {crystalPattern === 'sacred' && !voidMode && (
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFillObject,
+            {
+              opacity: connectionOpacityAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.2, 0.4],
+              }),
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={[
+              'transparent',
+              'rgba(245, 158, 11, 0.1)',
+              'rgba(251, 191, 36, 0.15)',
+              'rgba(245, 158, 11, 0.1)',
+              'transparent'
+            ]}
+            style={StyleSheet.absoluteFillObject}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
+          
+          {/* Sacred geometry lines */}
+          <Svg width={SCREEN_WIDTH} height={SCREEN_HEIGHT} style={StyleSheet.absoluteFillObject}>
+            {/* Golden ratio spiral approximation */}
+            <Line
+              x1={SCREEN_WIDTH * 0.2}
+              y1={SCREEN_HEIGHT * 0.2}
+              x2={SCREEN_WIDTH * 0.8}
+              y2={SCREEN_HEIGHT * 0.8}
+              stroke="rgba(245, 158, 11, 0.3)"
+              strokeWidth={1}
+              strokeDasharray="5,5"
+            />
+            <Line
+              x1={SCREEN_WIDTH * 0.8}
+              y1={SCREEN_HEIGHT * 0.2}
+              x2={SCREEN_WIDTH * 0.2}
+              y2={SCREEN_HEIGHT * 0.8}
+              stroke="rgba(245, 158, 11, 0.3)"
+              strokeWidth={1}
+              strokeDasharray="5,5"
+            />
+            
+            {/* Center circle */}
+            <Circle
+              cx={SCREEN_WIDTH * 0.5}
+              cy={SCREEN_HEIGHT * 0.5}
+              r={Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.15}
+              fill="none"
+              stroke="rgba(251, 191, 36, 0.4)"
+              strokeWidth={2}
+              strokeDasharray="3,3"
+            />
+          </Svg>
+        </Animated.View>
+      )}
+
       {/* Crystallized memory waves */}
       {crystallizedMemories.map(memory => {
         const x = (memory.x / 100) * SCREEN_WIDTH;
         const y = (memory.y / 100) * SCREEN_HEIGHT;
-        const baseSize = 200;
+        const baseSize = crystalPattern === 'sacred' ? 250 : 200; // Larger in sacred mode
         
         return (
           <Animated.View
@@ -230,7 +298,7 @@ export default function WaveField() {
               {
                 left: x - baseSize / 2,
                 top: y - baseSize / 2,
-                opacity: (voidMode ? 0.15 : 0.1) * memory.coherenceLevel,
+                opacity: (voidMode ? 0.15 : crystalPattern === 'sacred' ? 0.2 : 0.1) * memory.coherenceLevel,
                 transform: [
                   {
                     scale: wavePhaseAnim.interpolate({
@@ -247,6 +315,8 @@ export default function WaveField() {
                 colors={[
                   voidMode 
                     ? `hsl(${280 + (memory.harmonic % 80)}, 60%, 70%)`
+                    : crystalPattern === 'sacred'
+                    ? 'rgba(245, 158, 11, 0.6)' // Golden color in sacred mode
                     : memory.color, 
                   'transparent'
                 ]}

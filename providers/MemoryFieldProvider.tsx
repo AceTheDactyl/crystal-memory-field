@@ -141,22 +141,24 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
   // Sacred geometry trigger with throttling - use callback to prevent infinite loops
   const checkSacredGeometry = useCallback(() => {
     const now = Date.now();
-    if (now - lastPatternCheck.current > 1000) { // Check every 1 second for faster response
+    if (now - lastPatternCheck.current > 500) { // Check every 500ms for faster response
       const crystallizedCount = memories.filter(m => m.crystallized).length;
-      if (crystallizedCount >= 3 && crystalPattern === 'free') {
+      console.log(`🔍 Checking sacred geometry: ${crystallizedCount} crystals, pattern: ${crystalPattern}`);
+      
+      if (crystallizedCount >= 2 && crystalPattern === 'free') { // Reduced threshold for easier activation
         console.log(`🌟 Sacred geometry activated! ${crystallizedCount} crystals formed`);
         setCrystalPattern('sacred');
         lastPatternCheck.current = now;
         
         // Boost room resonance when sacred geometry activates
         setRoomResonance(prev => Math.min(1, prev + 0.3));
-      } else if (crystallizedCount < 2 && crystalPattern === 'sacred') {
+      } else if (crystallizedCount < 1 && crystalPattern === 'sacred') {
         console.log(`💫 Sacred geometry deactivated - insufficient crystals (${crystallizedCount})`);
         setCrystalPattern('free');
         lastPatternCheck.current = now;
       }
     }
-  }, [memories, crystalPattern]); // Include full memories array
+  }, [memories, crystalPattern])
 
   // Call check function in animation loop instead of useEffect
   useEffect(() => {
@@ -218,8 +220,8 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
         lastCoherenceCheck = now;
       }
       
-      // Check sacred geometry every 2000ms
-      if (now - lastPatternCheck > 2000) {
+      // Check sacred geometry every 1000ms
+      if (now - lastPatternCheck > 1000) {
         checkSacredGeometry();
         lastPatternCheck = now;
       }
@@ -287,7 +289,7 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
                 const crystallizedCount = prevMemories.filter(m => m.crystallized).length;
                 
                 // Apply sacred geometry to all memories when pattern is active
-                if (crystallizedCount >= 3) {
+                if (crystallizedCount >= 1) { // Reduced threshold
                   // Create stable formation based on memory index and harmonic
                   const baseAngle = (idx / totalMemories) * Math.PI * 2;
                   const harmonicOffset = (memory.harmonic % 360) * (Math.PI / 180) * 0.05; // Reduced for stability
