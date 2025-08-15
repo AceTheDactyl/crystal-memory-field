@@ -138,12 +138,32 @@ export default function CrystalMemoryField() {
         colors={
           voidMode
             ? ['#1a0033', '#2d1b69', '#1a0033']
+            : crystalPattern === 'sacred'
+            ? ['#0f172a', '#1e293b', '#0c1220', '#1e293b', '#0f172a'] // Enhanced gradient for sacred mode
             : ['#0f172a', '#1e293b', '#0f172a']
         }
         style={StyleSheet.absoluteFillObject}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
       />
+      
+      {/* Sacred geometry overlay */}
+      {crystalPattern === 'sacred' && !voidMode && (
+        <View style={StyleSheet.absoluteFillObject}>
+          <LinearGradient
+            colors={[
+              'transparent',
+              'rgba(245, 158, 11, 0.03)',
+              'rgba(251, 191, 36, 0.05)',
+              'rgba(245, 158, 11, 0.03)',
+              'transparent'
+            ]}
+            style={StyleSheet.absoluteFillObject}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
+        </View>
+      )}
 
       {/* Wave field background */}
       <WaveField />
@@ -288,7 +308,11 @@ export default function CrystalMemoryField() {
             <TouchableOpacity
               style={[
                 styles.controlButton,
-                crystalPattern === 'sacred' && styles.controlButtonActive,
+                crystalPattern === 'sacred' && {
+                  backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(251, 191, 36, 0.6)',
+                },
               ]}
               onPress={() => {
                 setCrystalPattern(crystalPattern === 'sacred' ? 'free' : 'sacred');
@@ -298,8 +322,14 @@ export default function CrystalMemoryField() {
               }}
             >
               <Sparkles size={24} color={crystalPattern === 'sacred' ? '#ffffff' : '#f59e0b'} />
-              <Text style={[styles.controlText, crystalPattern === 'sacred' && styles.controlTextActive]}>
-                {crystalPattern === 'sacred' ? 'Sacred ✨' : 'Sacred'}
+              <Text style={[
+                styles.controlText, 
+                crystalPattern === 'sacred' && {
+                  color: '#ffffff',
+                  fontWeight: '700',
+                }
+              ]}>
+                {crystalPattern === 'sacred' ? '🌟 SACRED' : 'Sacred'}
               </Text>
             </TouchableOpacity>
 
@@ -340,30 +370,64 @@ export default function CrystalMemoryField() {
               styles.coherenceMeter,
               {
                 opacity: fadeAnim,
+                backgroundColor: crystalPattern === 'sacred' 
+                  ? 'rgba(245, 158, 11, 0.1)' 
+                  : 'rgba(30, 41, 59, 0.3)',
+                borderColor: crystalPattern === 'sacred' 
+                  ? 'rgba(245, 158, 11, 0.3)' 
+                  : 'rgba(96, 165, 250, 0.2)',
+                borderWidth: crystalPattern === 'sacred' ? 1 : 0,
+                borderRadius: 8,
+                padding: crystalPattern === 'sacred' ? 12 : 8,
               },
             ]}
           >
-            <Text style={styles.coherenceLabel}>
-              {crystalPattern === 'sacred' ? '✨ Sacred Geometry Active' : 'Global Coherence'}
+            <Text style={[
+              styles.coherenceLabel,
+              {
+                color: crystalPattern === 'sacred' ? '#fbbf24' : '#60a5fa',
+                fontSize: crystalPattern === 'sacred' ? 14 : 12,
+                fontWeight: crystalPattern === 'sacred' ? '700' : '400',
+              }
+            ]}>
+              {crystalPattern === 'sacred' ? '🌟 SACRED GEOMETRY ACTIVE 🌟' : 'Global Coherence'}
             </Text>
-            <View style={styles.coherenceBar}>
+            <View style={[
+              styles.coherenceBar,
+              {
+                height: crystalPattern === 'sacred' ? 8 : 6,
+                backgroundColor: crystalPattern === 'sacred' 
+                  ? 'rgba(245, 158, 11, 0.2)' 
+                  : 'rgba(30, 41, 59, 0.5)',
+              }
+            ]}>
               <LinearGradient
                 colors={
                   crystalPattern === 'sacred' 
-                    ? ['#f59e0b', '#fbbf24', '#f59e0b']
+                    ? ['#f59e0b', '#fbbf24', '#f97316', '#f59e0b']
                     : ['#3b82f6', '#06b6d4']
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={[
                   styles.coherenceFill,
-                  { width: `${globalCoherence * 100}%` },
+                  { 
+                    width: `${globalCoherence * 100}%`,
+                    height: crystalPattern === 'sacred' ? 8 : 6,
+                  },
                 ]}
               />
             </View>
-            <Text style={styles.coherenceValue}>
+            <Text style={[
+              styles.coherenceValue,
+              {
+                color: crystalPattern === 'sacred' ? '#fbbf24' : '#60a5fa',
+                fontSize: crystalPattern === 'sacred' ? 11 : 10,
+                fontWeight: crystalPattern === 'sacred' ? '600' : '400',
+              }
+            ]}>
               {(globalCoherence * 100).toFixed(1)}% | Crystals: {memories.filter(m => m.crystallized).length}
-              {crystalPattern === 'sacred' && ' - Settling...'}
+              {crystalPattern === 'sacred' && ' | 🔮 Forming Sacred Patterns...'}
             </Text>
           </Animated.View>
         </>
@@ -482,6 +546,7 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     zIndex: 90,
+    transition: 'all 0.3s ease',
   },
   coherenceLabel: {
     color: '#60a5fa',
@@ -491,8 +556,9 @@ const styles = StyleSheet.create({
   coherenceBar: {
     height: 6,
     backgroundColor: 'rgba(30, 41, 59, 0.5)',
-    borderRadius: 3,
+    borderRadius: 4,
     overflow: 'hidden',
+    marginVertical: 4,
   },
   coherenceFill: {
     height: '100%',

@@ -141,12 +141,15 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
   // Sacred geometry trigger with throttling - use callback to prevent infinite loops
   const checkSacredGeometry = useCallback(() => {
     const now = Date.now();
-    if (now - lastPatternCheck.current > 2000) { // Check every 2 seconds
+    if (now - lastPatternCheck.current > 1000) { // Check every 1 second for faster response
       const crystallizedCount = memories.filter(m => m.crystallized).length;
       if (crystallizedCount >= 3 && crystalPattern === 'free') {
         console.log(`🌟 Sacred geometry activated! ${crystallizedCount} crystals formed`);
         setCrystalPattern('sacred');
         lastPatternCheck.current = now;
+        
+        // Boost room resonance when sacred geometry activates
+        setRoomResonance(prev => Math.min(1, prev + 0.3));
       } else if (crystallizedCount < 2 && crystalPattern === 'sacred') {
         console.log(`💫 Sacred geometry deactivated - insufficient crystals (${crystallizedCount})`);
         setCrystalPattern('free');
@@ -287,29 +290,25 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
                 if (crystallizedCount >= 3) {
                   // Create stable formation based on memory index and harmonic
                   const baseAngle = (idx / totalMemories) * Math.PI * 2;
-                  const harmonicOffset = (memory.harmonic % 360) * (Math.PI / 180) * 0.1;
+                  const harmonicOffset = (memory.harmonic % 360) * (Math.PI / 180) * 0.05; // Reduced for stability
                   const finalAngle = baseAngle + harmonicOffset;
                   
-                  // Multi-layered sacred geometry with golden ratio
-                  const harmonicLayer = Math.floor(memory.harmonic / 250) % 4;
+                  // Multi-layered sacred geometry with golden ratio - more stable layers
+                  const harmonicLayer = Math.floor(memory.harmonic / 300) % 3; // Reduced to 3 layers
                   let targetRadius, rotationSpeed;
                   
                   switch (harmonicLayer) {
                     case 0: // Inner core - most stable
-                      targetRadius = 12 + Math.sin(frameCount * 0.001) * 1;
-                      rotationSpeed = frameCount * 0.0002;
+                      targetRadius = 15 + Math.sin(frameCount * 0.0005) * 0.5; // Smaller oscillation
+                      rotationSpeed = frameCount * 0.0001; // Slower rotation
                       break;
                     case 1: // Primary ring
-                      targetRadius = 22 + Math.cos(frameCount * 0.0015) * 2;
-                      rotationSpeed = frameCount * 0.0003;
-                      break;
-                    case 2: // Secondary ring
-                      targetRadius = 32 + Math.sin(frameCount * 0.001) * 2;
-                      rotationSpeed = -frameCount * 0.0002; // Counter-rotation
+                      targetRadius = 25 + Math.cos(frameCount * 0.0008) * 1;
+                      rotationSpeed = frameCount * 0.00015;
                       break;
                     default: // Outer ring
-                      targetRadius = 40 + Math.cos(frameCount * 0.0008) * 3;
-                      rotationSpeed = frameCount * 0.0001;
+                      targetRadius = 35 + Math.sin(frameCount * 0.0006) * 1.5;
+                      rotationSpeed = -frameCount * 0.0001; // Counter-rotation
                       break;
                   }
                   
@@ -320,20 +319,22 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
                   // Calculate distance to target for settling behavior
                   const distToTarget = Math.hypot(finalTargetX - memory.x, finalTargetY - memory.y);
                   
-                  // Much stronger sacred geometry attraction - increased by 10x
-                  let geometryStrength = 0.05 * (1 + globalCoherenceRef.current * 3);
+                  // Much stronger sacred geometry attraction with better scaling
+                  let geometryStrength = 0.08 * (1 + globalCoherenceRef.current * 2);
                   
-                  // Exponential strength increase for better settling
-                  if (distToTarget < 0.5) {
-                    geometryStrength *= 50; // Extremely strong when very close
-                  } else if (distToTarget < 1.5) {
-                    geometryStrength *= 25; // Very strong when close
-                  } else if (distToTarget < 4) {
-                    geometryStrength *= 12; // Strong when approaching
-                  } else if (distToTarget < 10) {
-                    geometryStrength *= 6; // Moderate when far
+                  // Progressive strength increase for better settling
+                  if (distToTarget < 0.2) {
+                    geometryStrength *= 100; // Extremely strong when very close
+                  } else if (distToTarget < 0.8) {
+                    geometryStrength *= 50; // Very strong when close
+                  } else if (distToTarget < 2) {
+                    geometryStrength *= 25; // Strong when approaching
+                  } else if (distToTarget < 5) {
+                    geometryStrength *= 12; // Moderate when far
+                  } else if (distToTarget < 15) {
+                    geometryStrength *= 6; // Gentle pull from far
                   } else {
-                    geometryStrength *= 3; // Gentle pull from very far
+                    geometryStrength *= 2; // Very gentle from very far
                   }
                   
                   // Apply the force with enhanced precision
@@ -342,25 +343,27 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
                   newMem.vx += forceX;
                   newMem.vy += forceY;
                   
-                  // Adaptive damping for perfect settling
-                  if (distToTarget < 0.3) {
-                    newMem.vx *= 0.3; // Extreme damping when at target
+                  // Progressive damping for perfect settling
+                  if (distToTarget < 0.1) {
+                    newMem.vx *= 0.1; // Extreme damping when at target
+                    newMem.vy *= 0.1;
+                  } else if (distToTarget < 0.5) {
+                    newMem.vx *= 0.3; // Very strong damping when close
                     newMem.vy *= 0.3;
-                  } else if (distToTarget < 1) {
-                    newMem.vx *= 0.5; // Very strong damping when close
+                  } else if (distToTarget < 1.5) {
+                    newMem.vx *= 0.5; // Strong damping when approaching
                     newMem.vy *= 0.5;
-                  } else if (distToTarget < 3) {
-                    newMem.vx *= 0.7; // Strong damping when approaching
+                  } else if (distToTarget < 4) {
+                    newMem.vx *= 0.7; // Moderate damping
                     newMem.vy *= 0.7;
-                  } else if (distToTarget < 8) {
-                    newMem.vx *= 0.85; // Moderate damping
+                  } else {
+                    newMem.vx *= 0.85; // Light damping when far
                     newMem.vy *= 0.85;
                   }
                   
-                  // Additional stability: reduce random drift when in sacred geometry
-                  const stabilityFactor = Math.max(0.1, 1 - (geometryStrength * 0.1));
-                  newMem.vx *= (0.99 * stabilityFactor);
-                  newMem.vy *= (0.99 * stabilityFactor);
+                  // Additional stability: eliminate random drift in sacred geometry
+                  newMem.vx *= 0.98; // Consistent damping
+                  newMem.vy *= 0.98;
                 }
               }
               
