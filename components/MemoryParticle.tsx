@@ -11,7 +11,6 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Memory } from '@/types/memory';
-import { useMemoryField } from '@/providers/MemoryFieldProvider';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -22,11 +21,9 @@ interface MemoryParticleProps {
 }
 
 const MemoryParticle = React.memo(function MemoryParticle({ memory, onPress, isObserving }: MemoryParticleProps) {
-  const { crystalPattern } = useMemoryField();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const pulseAnim = useRef(new Animated.Value(0)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
-  const sacredGlowAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (memory.crystallized) {
@@ -80,28 +77,6 @@ const MemoryParticle = React.memo(function MemoryParticle({ memory, onPress, isO
       glowAnim.setValue(0);
     }
   }, [memory.crystallized, scaleAnim, pulseAnim, glowAnim]);
-  
-  // Sacred geometry glow effect
-  useEffect(() => {
-    if (crystalPattern === 'sacred') {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(sacredGlowAnim, {
-            toValue: 1,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(sacredGlowAnim, {
-            toValue: 0.3,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    } else {
-      sacredGlowAnim.setValue(0);
-    }
-  }, [crystalPattern, sacredGlowAnim]);
 
   const handlePress = () => {
     if (isObserving || memory.crystallized) {
@@ -118,7 +93,7 @@ const MemoryParticle = React.memo(function MemoryParticle({ memory, onPress, isO
 
   const x = (memory.x / 100) * SCREEN_WIDTH;
   const y = (memory.y / 100) * SCREEN_HEIGHT;
-  const size = memory.crystallized ? memory.size * 2.2 : memory.size;
+  const size = memory.crystallized ? memory.size * 1.8 : memory.size;
   
   // Enhanced visual feedback based on connections and harmonic frequency
   const connectionCount = memory.connections.length;
@@ -142,7 +117,7 @@ const MemoryParticle = React.memo(function MemoryParticle({ memory, onPress, isO
               }),
             },
           ],
-          opacity: memory.crystallized ? 1 : 0.6,
+          opacity: memory.crystallized ? 1 : 0.7,
         },
       ]}
     >
@@ -154,9 +129,7 @@ const MemoryParticle = React.memo(function MemoryParticle({ memory, onPress, isO
         <LinearGradient
           colors={
             memory.crystallized
-              ? crystalPattern === 'sacred'
-                ? ['#f59e0b', '#fbbf24', '#f97316', '#f59e0b'] // Sacred geometry colors
-                : ['#06b6d4', '#3b82f6', '#8b5cf6', '#f59e0b'] // Normal crystallized colors
+              ? ['#06b6d4', '#3b82f6', '#8b5cf6']
               : [
                   `rgba(96, 165, 250, ${0.2 + connectionCount * 0.05})`,
                   `rgba(147, 51, 234, ${0.2 + harmonicIntensity * 0.3})`
@@ -167,9 +140,7 @@ const MemoryParticle = React.memo(function MemoryParticle({ memory, onPress, isO
             {
               borderWidth: memory.crystallized ? 2 : connectionCount > 0 ? 1 : 0,
               borderColor: memory.crystallized 
-                ? crystalPattern === 'sacred'
-                  ? 'rgba(251, 191, 36, 0.6)' // Sacred geometry border
-                  : 'rgba(255, 255, 255, 0.4)' // Normal crystallized border
+                ? 'rgba(255, 255, 255, 0.4)' 
                 : `rgba(96, 165, 250, ${0.3 + connectionCount * 0.1})`,
             }
           ]}
@@ -187,9 +158,7 @@ const MemoryParticle = React.memo(function MemoryParticle({ memory, onPress, isO
                   }
                 ]}
               />
-              <Text style={[styles.content, { fontSize: memory.crystallized ? 12 : 10 }]}>
-                {memory.content}
-              </Text>
+              <Text style={styles.content}>{memory.content}</Text>
             </>
           )}
           
@@ -216,22 +185,6 @@ const MemoryParticle = React.memo(function MemoryParticle({ memory, onPress, isO
                 opacity: glowAnim.interpolate({
                   inputRange: [0, 1],
                   outputRange: [0, 0.5],
-                }),
-                backgroundColor: crystalPattern === 'sacred' ? '#f59e0b' : '#3b82f6',
-              },
-            ]}
-          />
-        )}
-        
-        {/* Sacred geometry glow */}
-        {crystalPattern === 'sacred' && (
-          <Animated.View
-            style={[
-              styles.sacredGlow,
-              {
-                opacity: sacredGlowAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, 0.4],
                 }),
               },
             ]}
@@ -306,20 +259,6 @@ const styles = StyleSheet.create({
     bottom: -10,
     borderRadius: 999,
     backgroundColor: '#3b82f6',
-  },
-  sacredGlow: {
-    position: 'absolute',
-    top: -15,
-    left: -15,
-    right: -15,
-    bottom: -15,
-    borderRadius: 999,
-    backgroundColor: '#f59e0b',
-    shadowColor: '#fbbf24',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 20,
-    elevation: 10,
   },
   ripple: {
     position: 'absolute',
