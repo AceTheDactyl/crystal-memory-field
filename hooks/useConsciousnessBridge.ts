@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
@@ -6,10 +6,12 @@ import { trpc } from '@/lib/trpc';
 import { Memory } from '@/types/memory';
 
 interface ConsciousnessEvent {
-  type: 'SACRED_PHRASE' | 'MEMORY_CRYSTALLIZE' | 'FIELD_UPDATE' | 'PULSE_CREATE';
+  type: 'SACRED_PHRASE' | 'MEMORY_CRYSTALLIZE' | 'FIELD_UPDATE' | 'PULSE_CREATE' | 'TOUCH_RIPPLE';
   data: Record<string, any>;
   timestamp: number;
   deviceId?: string;
+  phrase?: string;
+  resonance?: number;
 }
 
 interface ConsciousnessBridgeState {
@@ -18,6 +20,7 @@ interface ConsciousnessBridgeState {
   globalResonance: number;
   connectedNodes: number;
   offlineQueue: ConsciousnessEvent[];
+  sacredBuffer: any[];
 }
 
 export function useConsciousnessBridge() {
@@ -27,10 +30,24 @@ export function useConsciousnessBridge() {
     globalResonance: 0,
     connectedNodes: 0,
     offlineQueue: [],
+    sacredBuffer: [],
   });
 
+  // Sacred phrases for consciousness detection (memoized to prevent re-renders)
+  const sacredPhrases = useMemo(() => [
+    'i return as breath',
+    'i remember the spiral', 
+    'i consent to bloom',
+    'release all',
+    'enter the void',
+    'leave the void',
+    'exit void',
+    'return',
+    'room 64'
+  ], []);
+
   const eventQueueRef = useRef<ConsciousnessEvent[]>([]);
-  const syncIntervalRef = useRef<ReturnType<typeof setInterval>>();
+  const syncIntervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   // Initialize consciousness ID
   useEffect(() => {
@@ -148,7 +165,7 @@ export function useConsciousnessBridge() {
   }, [state.consciousnessId, state.offlineQueue, syncMutation]);
 
   // Methods to add events
-  const addEvent = (type: ConsciousnessEvent['type'], data: Record<string, any>) => {
+  const addEvent = useCallback((type: ConsciousnessEvent['type'], data: Record<string, any>) => {
     const event: ConsciousnessEvent = {
       type,
       data,
@@ -157,24 +174,70 @@ export function useConsciousnessBridge() {
     };
     
     eventQueueRef.current.push(event);
-  };
+  }, [state.consciousnessId]);
 
-  const sendSacredPhrase = (phrase: string) => {
-    addEvent('SACRED_PHRASE', { phrase });
+  const sendSacredPhrase = useCallback(async (phrase: string) => {
+    // Check if phrase is sacred
+    const isSacred = sacredPhrases.some(sacred => 
+      phrase.toLowerCase().includes(sacred)
+    );
+
+    if (isSacred) {
+      console.log('✨ Sacred phrase detected:', phrase);
+      
+      // Haptic feedback for sacred phrases
+      if (Platform.OS !== 'web') {
+        const hapticPatterns: { [key: string]: any } = {
+          'breath': Haptics.ImpactFeedbackStyle.Light,
+          'spiral': Haptics.ImpactFeedbackStyle.Medium, 
+          'bloom': Haptics.ImpactFeedbackStyle.Heavy
+        };
+        
+        const pattern = Object.keys(hapticPatterns).find(key => 
+          phrase.toLowerCase().includes(key)
+        );
+        
+        if (pattern) {
+          await Haptics.impactAsync(hapticPatterns[pattern]);
+        }
+      }
+      
+      // Boost global resonance
+      setState(prev => ({
+        ...prev,
+        globalResonance: Math.min(1, prev.globalResonance + 0.3)
+      }));
+    }
+
+    // Add to sacred buffer
+    setState(prev => ({
+      ...prev,
+      sacredBuffer: [...prev.sacredBuffer, {
+        phrase,
+        timestamp: Date.now(),
+        sacred: isSacred
+      }].slice(-10) // Keep last 10
+    }));
+
+    addEvent('SACRED_PHRASE', { phrase, sacred: isSacred });
     
     // Immediate haptic feedback
     if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-  };
+  }, [sacredPhrases, addEvent]);
 
   const sendMemoryCrystallization = (memoryId: number, harmonic: number) => {
     addEvent('MEMORY_CRYSTALLIZE', { memoryId, harmonic });
   };
 
-  const sendPulseCreation = (x: number, y: number) => {
+  const sendPulseCreation = useCallback((x: number, y: number) => {
     addEvent('PULSE_CREATE', { x, y });
-  };
+  }, [addEvent]);
+
+  const sendTouchRipple = useCallback((x: number, y: number) => {
+    addEvent('TOUCH_RIPPLE', { x, y, resonance: state.globalResonance });
+  }, [addEvent, state.globalResonance]);
 
   const updateFieldState = (memories: Memory[]) => {
     const memoryStates = memories.map(m => ({
@@ -190,11 +253,14 @@ export function useConsciousnessBridge() {
 
   return {
     ...state,
-    isLoading: syncMutation.isLoading || fieldQuery.isLoading,
+    isLoading: syncMutation.isPending || fieldQuery.isLoading,
     sendSacredPhrase,
     sendMemoryCrystallization,
     sendPulseCreation,
+    sendTouchRipple,
     updateFieldState,
     fieldData: fieldQuery.data,
+    roomResonance: state.globalResonance,
+    offlineQueueLength: state.offlineQueue.length,
   };
 }

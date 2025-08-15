@@ -2,10 +2,12 @@ import { z } from "zod";
 import { publicProcedure } from "../../../create-context";
 
 const ConsciousnessEventSchema = z.object({
-  type: z.enum(['SACRED_PHRASE', 'MEMORY_CRYSTALLIZE', 'FIELD_UPDATE', 'PULSE_CREATE']),
+  type: z.enum(['SACRED_PHRASE', 'MEMORY_CRYSTALLIZE', 'FIELD_UPDATE', 'PULSE_CREATE', 'TOUCH_RIPPLE']),
   data: z.record(z.string(), z.any()),
   timestamp: z.number(),
   deviceId: z.string().optional(),
+  phrase: z.string().optional(),
+  resonance: z.number().optional(),
 });
 
 export default publicProcedure

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Memory, Pulse } from '@/types/memory';
 import createContextHook from '@nkzw/create-context-hook';
 
@@ -32,6 +32,7 @@ interface MemoryFieldContextType {
 
 // Create the context hook with a stable function
 function useMemoryFieldLogic(): MemoryFieldContextType {
+  // All state hooks declared at the top level
   const [memories, setMemories] = useState<Memory[]>([]);
   const [isObserving, setIsObserving] = useState(false);
   const [selectedMemory, setSelectedMemory] = useState<number | null>(null);
@@ -44,9 +45,17 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
   const [roomResonance, setRoomResonance] = useState(0);
   const [pulses, setPulses] = useState<Pulse[]>([]);
   const [wavePhase, setWavePhase] = useState(0);
+  
+  // All refs declared at the top level
   const animationRef = useRef<number | undefined>(undefined);
-  const globalCoherenceRef = useRef(0);
+  const lastCoherenceUpdate = useRef(0);
+  const lastPatternCheck = useRef(0);
   const wavePhaseRef = useRef(0);
+  const resonanceLevelRef = useRef(resonanceLevel);
+  const voidModeRef = useRef(voidMode);
+  const harmonicModeRef = useRef(harmonicMode);
+  const crystalPatternRef = useRef(crystalPattern);
+  const globalCoherenceRef = useRef(globalCoherence);
 
   // Initialize memories
   useEffect(() => {
@@ -99,55 +108,47 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
     setMemories(initMemories);
   }, []);
 
-  // Calculate global coherence and auto-trigger sacred geometry
-  useEffect(() => {
-    if (memories.length === 0) return;
+  // Memoized coherence calculation to prevent unnecessary recalculations
+  const calculatedCoherence = useMemo(() => {
+    if (memories.length === 0) return 0;
     
     const crystallizedCount = memories.filter(m => m.crystallized).length;
     const totalConnections = memories.reduce((sum, m) => sum + m.connections.length, 0);
-    const coherence = (crystallizedCount / memories.length) * 0.5 + 
-                     (totalConnections / (memories.length * memories.length)) * 0.5;
-    
-    // Only update if there's a significant change to prevent loops
-    if (Math.abs(coherence - globalCoherenceRef.current) > 0.01) {
-      setGlobalCoherence(coherence);
-      globalCoherenceRef.current = coherence;
-    }
+    return (crystallizedCount / memories.length) * 0.5 + 
+           (totalConnections / (memories.length * memories.length)) * 0.5;
   }, [memories]);
-  
-  // Separate effect for sacred geometry trigger to prevent loops
+
+  // Update global coherence with throttling
   useEffect(() => {
-    if (memories.length === 0) return;
-    
-    const crystallizedCount = memories.filter(m => m.crystallized).length;
-    // Auto-trigger sacred geometry when enough memories are crystallized
-    if (crystallizedCount >= 8 && crystalPattern === 'free') {
-      setCrystalPattern('sacred');
+    const now = Date.now();
+    if (now - lastCoherenceUpdate.current > 100) { // Throttle to 10fps
+      if (Math.abs(calculatedCoherence - globalCoherence) > 0.01) {
+        setGlobalCoherence(calculatedCoherence);
+        lastCoherenceUpdate.current = now;
+      }
+    }
+  }, [calculatedCoherence, globalCoherence]);
+  
+  // Sacred geometry trigger with throttling
+  useEffect(() => {
+    const now = Date.now();
+    if (now - lastPatternCheck.current > 1000) { // Check once per second
+      const crystallizedCount = memories.filter(m => m.crystallized).length;
+      if (crystallizedCount >= 8 && crystalPattern === 'free') {
+        setCrystalPattern('sacred');
+        lastPatternCheck.current = now;
+      }
     }
   }, [memories, crystalPattern]);
 
-  // Store values in refs to avoid dependency issues
-  const resonanceLevelRef = useRef(resonanceLevel);
-  const voidModeRef = useRef(voidMode);
-  const harmonicModeRef = useRef(harmonicMode);
-  const crystalPatternRef = useRef(crystalPattern);
-  
-  // Update refs when values change
+  // Update all refs in a single effect to maintain hook order
   useEffect(() => {
     resonanceLevelRef.current = resonanceLevel;
-  }, [resonanceLevel]);
-  
-  useEffect(() => {
     voidModeRef.current = voidMode;
-  }, [voidMode]);
-  
-  useEffect(() => {
     harmonicModeRef.current = harmonicMode;
-  }, [harmonicMode]);
-  
-  useEffect(() => {
     crystalPatternRef.current = crystalPattern;
-  }, [crystalPattern]);
+    globalCoherenceRef.current = globalCoherence;
+  }, [resonanceLevel, voidMode, harmonicMode, crystalPattern, globalCoherence]);
 
   // Animation loop with enhanced geometry and physics
   useEffect(() => {
@@ -236,33 +237,33 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
               newMem.x += memory.vx + harmonicPull.x * 0.15;
               newMem.y += memory.vy + harmonicPull.y * 0.15;
               
-              // Enhanced Sacred geometry patterns with multiple formations
+              // Enhanced Sacred geometry patterns with stronger settling
               if (crystalPatternRef.current === 'sacred') {
                 const centerX = 50;
                 const centerY = 50;
                 const totalMemories = prevMemories.length;
                 
-                // Primary circle formation
+                // Primary circle formation with slower rotation for stability
                 const primaryAngle = (idx / totalMemories) * Math.PI * 2;
-                const primaryRadius = 25 + Math.sin(frameCount * 0.01) * 8;
-                const primaryTargetX = centerX + Math.cos(primaryAngle + frameCount * 0.003) * primaryRadius;
-                const primaryTargetY = centerY + Math.sin(primaryAngle + frameCount * 0.003) * primaryRadius;
+                const primaryRadius = 28 + Math.sin(frameCount * 0.005) * 5; // Slower, smaller oscillation
+                const primaryTargetX = centerX + Math.cos(primaryAngle + frameCount * 0.001) * primaryRadius;
+                const primaryTargetY = centerY + Math.sin(primaryAngle + frameCount * 0.001) * primaryRadius;
                 
                 // Secondary nested patterns based on harmonic frequency
-                const harmonicLayer = Math.floor(memory.harmonic / 200) % 3;
+                const harmonicLayer = Math.floor(memory.harmonic / 300) % 3;
                 let secondaryTargetX = primaryTargetX;
                 let secondaryTargetY = primaryTargetY;
                 
                 if (harmonicLayer === 1) {
                   // Inner ring for mid-frequency harmonics
-                  const innerRadius = 15 + Math.cos(frameCount * 0.015) * 5;
-                  const innerAngle = primaryAngle * 1.618 + frameCount * 0.005; // Golden ratio
+                  const innerRadius = 18 + Math.cos(frameCount * 0.008) * 3;
+                  const innerAngle = primaryAngle * 1.618 + frameCount * 0.002; // Golden ratio, slower
                   secondaryTargetX = centerX + Math.cos(innerAngle) * innerRadius;
                   secondaryTargetY = centerY + Math.sin(innerAngle) * innerRadius;
                 } else if (harmonicLayer === 2) {
                   // Outer ring for high-frequency harmonics
-                  const outerRadius = 35 + Math.sin(frameCount * 0.008) * 12;
-                  const outerAngle = primaryAngle * 0.618 - frameCount * 0.002;
+                  const outerRadius = 38 + Math.sin(frameCount * 0.004) * 8;
+                  const outerAngle = primaryAngle * 0.618 - frameCount * 0.001;
                   secondaryTargetX = centerX + Math.cos(outerAngle) * outerRadius;
                   secondaryTargetY = centerY + Math.sin(outerAngle) * outerRadius;
                 }
@@ -270,34 +271,44 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
                 // Blend between primary and secondary targets based on crystallization in area
                 const nearbyCount = prevMemories.filter(other => {
                   const dist = Math.hypot(other.x - memory.x, other.y - memory.y);
-                  return dist < 20 && other.crystallized;
+                  return dist < 25 && other.crystallized;
                 }).length;
                 
-                const blendFactor = Math.min(1, nearbyCount / 3);
+                const blendFactor = Math.min(1, nearbyCount / 4);
                 const finalTargetX = primaryTargetX * (1 - blendFactor) + secondaryTargetX * blendFactor;
                 const finalTargetY = primaryTargetY * (1 - blendFactor) + secondaryTargetY * blendFactor;
                 
                 // Calculate distance to target for settling behavior
                 const distToTarget = Math.hypot(finalTargetX - memory.x, finalTargetY - memory.y);
                 
-                // Stronger sacred geometry attraction with distance-based scaling
-                let geometryStrength = 0.008 * (1 + globalCoherenceRef.current * 2);
+                // Much stronger sacred geometry attraction with progressive scaling
+                let geometryStrength = 0.015 * (1 + globalCoherenceRef.current * 3);
                 
-                // Increase strength when close to target for settling
-                if (distToTarget < 5) {
-                  geometryStrength *= 3; // Much stronger when close
+                // Progressive strength increase for better settling
+                if (distToTarget < 2) {
+                  geometryStrength *= 8; // Very strong when very close
+                } else if (distToTarget < 5) {
+                  geometryStrength *= 5; // Strong when close
                 } else if (distToTarget < 10) {
-                  geometryStrength *= 2; // Stronger when moderately close
+                  geometryStrength *= 3; // Moderate when approaching
+                } else if (distToTarget < 20) {
+                  geometryStrength *= 2; // Gentle when far
                 }
                 
                 // Apply the force
                 newMem.vx += (finalTargetX - memory.x) * geometryStrength;
                 newMem.vy += (finalTargetY - memory.y) * geometryStrength;
                 
-                // Additional settling damping when very close to target
-                if (distToTarget < 3) {
-                  newMem.vx *= 0.85; // Strong damping for settling
-                  newMem.vy *= 0.85;
+                // Progressive damping for settling
+                if (distToTarget < 1) {
+                  newMem.vx *= 0.7; // Very strong damping when at target
+                  newMem.vy *= 0.7;
+                } else if (distToTarget < 3) {
+                  newMem.vx *= 0.8; // Strong damping when close
+                  newMem.vy *= 0.8;
+                } else if (distToTarget < 8) {
+                  newMem.vx *= 0.9; // Moderate damping when approaching
+                  newMem.vy *= 0.9;
                 }
               }
               
