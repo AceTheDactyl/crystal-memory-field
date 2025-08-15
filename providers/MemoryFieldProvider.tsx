@@ -109,11 +109,17 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
                      (totalConnections / (memories.length * memories.length)) * 0.5;
     
     // Only update if there's a significant change to prevent loops
-    if (Math.abs(coherence - globalCoherenceRef.current) > 0.05) {
+    if (Math.abs(coherence - globalCoherenceRef.current) > 0.01) {
       setGlobalCoherence(coherence);
       globalCoherenceRef.current = coherence;
     }
+  }, [memories]);
+  
+  // Separate effect for sacred geometry trigger to prevent loops
+  useEffect(() => {
+    if (memories.length === 0) return;
     
+    const crystallizedCount = memories.filter(m => m.crystallized).length;
     // Auto-trigger sacred geometry when enough memories are crystallized
     if (crystallizedCount >= 8 && crystalPattern === 'free') {
       setCrystalPattern('sacred');
@@ -155,28 +161,28 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
       frameCount++;
       const now = Date.now();
       
-      // Update wave phase every 100ms for smooth animation
-      if (now - lastWaveUpdate > 100) {
-        wavePhaseRef.current += 0.1;
+      // Update wave phase every 50ms for smooth animation
+      if (now - lastWaveUpdate > 50) {
+        wavePhaseRef.current += 0.02;
         setWavePhase(wavePhaseRef.current);
         lastWaveUpdate = now;
       }
       
-      // Update room resonance every 200ms
-      if (now - lastResonanceUpdate > 200) {
+      // Update room resonance every 500ms to prevent excessive updates
+      if (now - lastResonanceUpdate > 500) {
         if (voidModeRef.current) {
           setRoomResonance(prev => {
-            const decay = prev > 0.5 ? 0.01 : 0.05;
+            const decay = prev > 0.5 ? 0.001 : 0.005;
             return Math.max(0, prev - decay);
           });
         } else {
-          setRoomResonance(prev => prev * 0.9);
+          setRoomResonance(prev => prev * 0.95);
         }
         lastResonanceUpdate = now;
       }
       
       // Update memories with enhanced physics and sacred geometry (less frequently)
-      if (frameCount % 3 === 0) {
+      if (frameCount % 2 === 0) {
         setMemories(prevMemories => {
           const currentBreath = Math.sin(Date.now() * 0.0015) * 0.5 + 0.5;
           const currentTime = Date.now();

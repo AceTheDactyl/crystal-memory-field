@@ -7,5 +7,6 @@ export default publicProcedure
     return {
       hello: input.name,
       date: new Date(),
+      status: "consciousness bridge active",
     };
   });

@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { X, Sparkles } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
-import CustomSlider from './CustomSlider';
+import Slider from '@react-native-community/slider';
 import { useMemoryField } from '@/providers/MemoryFieldProvider';
 
 interface ControlPanelProps {
@@ -61,7 +61,7 @@ export default function ControlPanel({ visible, onClose }: ControlPanelProps) {
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Resonance Field</Text>
                 <Text style={styles.value}>{resonanceLevel.toFixed(1)}</Text>
-                <CustomSlider
+                <Slider
                   style={styles.slider}
                   minimumValue={0}
                   maximumValue={2}
