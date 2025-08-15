@@ -56,6 +56,7 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
   const harmonicModeRef = useRef(harmonicMode);
   const crystalPatternRef = useRef(crystalPattern);
   const globalCoherenceRef = useRef(globalCoherence);
+  const isInitialized = useRef(false);
 
   // Initialize memories
   useEffect(() => {
@@ -118,34 +119,48 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
            (totalConnections / (memories.length * memories.length)) * 0.5;
   }, [memories]);
 
-  // Update global coherence with throttling
-  useEffect(() => {
+  // Update global coherence with throttling - use callback to prevent infinite loops
+  const updateGlobalCoherence = useCallback(() => {
     const now = Date.now();
-    if (now - lastCoherenceUpdate.current > 100) { // Throttle to 10fps
-      if (Math.abs(calculatedCoherence - globalCoherence) > 0.01) {
+    if (now - lastCoherenceUpdate.current > 500) { // Increased throttle to 2fps
+      const diff = Math.abs(calculatedCoherence - globalCoherence);
+      if (diff > 0.05) { // Increased threshold to prevent micro-updates
         setGlobalCoherence(calculatedCoherence);
         lastCoherenceUpdate.current = now;
       }
     }
   }, [calculatedCoherence, globalCoherence]);
-  
-  // Sacred geometry trigger with throttling
+
+  // Call update function in animation loop instead of useEffect
   useEffect(() => {
+    if (isInitialized.current) {
+      updateGlobalCoherence();
+    }
+  }, [updateGlobalCoherence]);
+  
+  // Sacred geometry trigger with throttling - use callback to prevent infinite loops
+  const checkSacredGeometry = useCallback(() => {
     const now = Date.now();
-    if (now - lastPatternCheck.current > 1000) { // Check once per second
+    if (now - lastPatternCheck.current > 2000) { // Check every 2 seconds
       const crystallizedCount = memories.filter(m => m.crystallized).length;
-      if (crystallizedCount >= 3 && crystalPattern === 'free') { // Lower threshold for faster activation
-        console.log(`🌟 Sacred geometry activated! ${crystallizedCount} crystals formed - memories will now settle into sacred patterns`);
+      if (crystallizedCount >= 3 && crystalPattern === 'free') {
+        console.log(`🌟 Sacred geometry activated! ${crystallizedCount} crystals formed`);
         setCrystalPattern('sacred');
         lastPatternCheck.current = now;
       } else if (crystallizedCount < 2 && crystalPattern === 'sacred') {
-        // Deactivate sacred geometry if too few crystals remain
         console.log(`💫 Sacred geometry deactivated - insufficient crystals (${crystallizedCount})`);
         setCrystalPattern('free');
         lastPatternCheck.current = now;
       }
     }
-  }, [memories, crystalPattern]);
+  }, [memories, crystalPattern]); // Include full memories array
+
+  // Call check function in animation loop instead of useEffect
+  useEffect(() => {
+    if (isInitialized.current && memories.length > 0) {
+      checkSacredGeometry();
+    }
+  }, [checkSacredGeometry, memories.length]);
 
   // Update all refs in a single effect to maintain hook order
   useEffect(() => {
@@ -158,25 +173,31 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
 
   // Animation loop with enhanced geometry and physics
   useEffect(() => {
-    if (isPaused || memories.length === 0) return;
+    if (isPaused || memories.length === 0) {
+      isInitialized.current = false;
+      return;
+    }
 
+    isInitialized.current = true;
     let frameCount = 0;
     let lastWaveUpdate = 0;
     let lastResonanceUpdate = 0;
+    let lastCoherenceCheck = 0;
+    let lastPatternCheck = 0;
     
     const animate = () => {
       frameCount++;
       const now = Date.now();
       
-      // Update wave phase every 50ms for smooth animation
-      if (now - lastWaveUpdate > 50) {
+      // Update wave phase every 100ms for smooth animation
+      if (now - lastWaveUpdate > 100) {
         wavePhaseRef.current += 0.02;
         setWavePhase(wavePhaseRef.current);
         lastWaveUpdate = now;
       }
       
-      // Update room resonance every 500ms to prevent excessive updates
-      if (now - lastResonanceUpdate > 500) {
+      // Update room resonance every 1000ms to prevent excessive updates
+      if (now - lastResonanceUpdate > 1000) {
         if (voidModeRef.current) {
           setRoomResonance(prev => {
             const decay = prev > 0.5 ? 0.001 : 0.005;
@@ -186,6 +207,18 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
           setRoomResonance(prev => prev * 0.95);
         }
         lastResonanceUpdate = now;
+      }
+      
+      // Update coherence every 1000ms
+      if (now - lastCoherenceCheck > 1000) {
+        updateGlobalCoherence();
+        lastCoherenceCheck = now;
+      }
+      
+      // Check sacred geometry every 2000ms
+      if (now - lastPatternCheck > 2000) {
+        checkSacredGeometry();
+        lastPatternCheck = now;
       }
       
       // Update memories with enhanced physics and sacred geometry (less frequently)
@@ -423,14 +456,15 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
+      isInitialized.current = false;
     };
-  }, [isPaused, memories.length]); // Stable dependencies only
+  }, [isPaused, memories.length, updateGlobalCoherence, checkSacredGeometry]); // Include callbacks
 
   const handleObservation = useCallback((memoryId: number) => {
     // Allow crystallization in void mode or when observing
-    if (!isObserving && !voidModeRef.current) return;
+    if (!isObserving && !voidMode) return;
     
-    if (voidModeRef.current) {
+    if (voidMode) {
       setRoomResonance(prev => Math.min(1, prev + 0.05));
     }
     
@@ -442,7 +476,7 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
             ...mem, 
             crystallized: true,
             crystallizationTime: Date.now(),
-            coherenceLevel: 0.1 // Start with some coherence
+            coherenceLevel: 0.1
           };
         }
         
@@ -451,7 +485,7 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
         
         const dist = Math.hypot(mem.x - source.x, mem.y - source.y);
         const harmonicDiff = Math.abs(mem.harmonic - source.harmonic);
-        const harmonicResonance = harmonicDiff > 0 ? 1 - Math.min(1, harmonicDiff / 800) : 1; // Increased sensitivity
+        const harmonicResonance = harmonicDiff > 0 ? 1 - Math.min(1, harmonicDiff / 800) : 1;
         
         // Enhanced cascade crystallization
         if (dist < 25 * harmonicResonance && Math.random() < harmonicResonance * 0.7) {
@@ -459,7 +493,7 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
           return { 
             ...mem, 
             crystallized: true,
-            crystallizationTime: Date.now() + dist * 5, // Faster cascade
+            crystallizationTime: Date.now() + dist * 5,
             coherenceLevel: 0.05
           };
         }
@@ -472,7 +506,7 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
       })
     );
     setSelectedMemory(memoryId);
-  }, [isObserving]);
+  }, [isObserving, voidMode]); // Use actual state instead of ref
 
   const releaseAll = useCallback(() => {
     setMemories(prevMemories =>
@@ -490,7 +524,7 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
 
   const createPulse = useCallback((x: number, y: number) => {
     const newPulse: Pulse = {
-      id: Date.now(),
+      id: Date.now() + Math.random(), // Ensure unique IDs
       x,
       y,
       age: 0,
@@ -498,7 +532,7 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
     };
     setPulses(prev => [...prev, newPulse]);
     
-    if (voidModeRef.current) {
+    if (voidMode) {
       setRoomResonance(prev => Math.min(1, prev + 0.02));
     }
     
@@ -518,7 +552,7 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
         return mem;
       })
     );
-  }, []);
+  }, [voidMode]); // Use actual state instead of ref
 
   // Return stable object reference to prevent unnecessary re-renders
   return {

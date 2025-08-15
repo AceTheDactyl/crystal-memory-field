@@ -129,7 +129,7 @@ export default function CrystalMemoryField() {
       duration: 300,
       useNativeDriver: true,
     }).start();
-  }, [uiVisible]);
+  }, [uiVisible, fadeAnim]);
 
   return (
     <View style={styles.container} {...panResponder.panHandlers}>
@@ -362,7 +362,7 @@ export default function CrystalMemoryField() {
               />
             </View>
             <Text style={styles.coherenceValue}>
-              {(globalCoherence * 100).toFixed(1)}%
+              {(globalCoherence * 100).toFixed(1)}% | Crystals: {memories.filter(m => m.crystallized).length}
               {crystalPattern === 'sacred' && ' - Settling...'}
             </Text>
           </Animated.View>

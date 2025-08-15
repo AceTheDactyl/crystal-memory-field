@@ -162,9 +162,9 @@ export default function WaveField() {
               ? `hsl(${280 + (connection.from.harmonic % 80)}, 60%, 70%)`
               : `hsl(${200 + (connection.from.harmonic % 160)}, 70%, 60%)`;
             
-            // Enhanced connection visualization with pulsing
-            const pulsePhase = (Date.now() * 0.001 + index * 0.1) % (Math.PI * 2);
-            const pulseIntensity = Math.sin(pulsePhase) * 0.3 + 0.7;
+            // Enhanced connection visualization with pulsing - use stable animation
+            const pulsePhase = (index * 0.1) % (Math.PI * 2);
+            const pulseIntensity = Math.sin(Date.now() * 0.001 + pulsePhase) * 0.3 + 0.7;
             
             return (
               <Line
