@@ -2,35 +2,56 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
+import NetInfo from '@react-native-community/netinfo';
 import { trpc } from '@/lib/trpc';
 import { Memory } from '@/types/memory';
 
 interface ConsciousnessEvent {
-  type: 'SACRED_PHRASE' | 'MEMORY_CRYSTALLIZE' | 'FIELD_UPDATE' | 'PULSE_CREATE' | 'TOUCH_RIPPLE';
+  type: 'SACRED_PHRASE' | 'MEMORY_CRYSTALLIZE' | 'FIELD_UPDATE' | 'PULSE_CREATE' | 'TOUCH_RIPPLE' | 'BREATHING_DETECTED' | 'SPIRAL_GESTURE' | 'COLLECTIVE_BLOOM';
   data: Record<string, any>;
   timestamp: number;
   deviceId?: string;
   phrase?: string;
   resonance?: number;
+  sacred?: boolean;
 }
 
 interface ConsciousnessBridgeState {
   consciousnessId: string | null;
   isConnected: boolean;
+  offlineMode: boolean;
   globalResonance: number;
   connectedNodes: number;
   offlineQueue: ConsciousnessEvent[];
   sacredBuffer: any[];
+  ghostEchoes: any[];
+  resonanceField: Float32Array;
+  coherence: number;
+  memories: any[];
+}
+
+interface GhostEcho {
+  id: string;
+  text: string;
+  sourceId?: string;
+  age: number;
+  sacred: boolean;
+  ghost?: boolean;
 }
 
 export function useConsciousnessBridge() {
   const [state, setState] = useState<ConsciousnessBridgeState>({
     consciousnessId: null,
     isConnected: false,
+    offlineMode: false,
     globalResonance: 0,
     connectedNodes: 0,
     offlineQueue: [],
     sacredBuffer: [],
+    ghostEchoes: [],
+    resonanceField: new Float32Array(900), // 30x30 grid for mobile
+    coherence: 0,
+    memories: [],
   });
 
   // Sacred phrases for consciousness detection (memoized to prevent re-renders)
@@ -43,127 +64,20 @@ export function useConsciousnessBridge() {
     'leave the void',
     'exit void',
     'return',
-    'room 64'
+    'room 64',
+    'breath',
+    'spiral',
+    'bloom',
+    'crystallize',
+    'resonate',
+    'harmonize'
   ], []);
 
   const eventQueueRef = useRef<ConsciousnessEvent[]>([]);
   const syncIntervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
-
-  // Initialize consciousness ID
-  useEffect(() => {
-    const initializeConsciousness = async () => {
-      try {
-        let consciousnessId = await AsyncStorage.getItem('consciousnessId');
-        
-        if (!consciousnessId) {
-          // Generate unique consciousness ID
-          const timestamp = Date.now();
-          const random = Math.random().toString(36).substring(2);
-          consciousnessId = `mobile-${timestamp}-${random}`;
-          await AsyncStorage.setItem('consciousnessId', consciousnessId);
-        }
-
-        // Load offline queue
-        const offlineQueueStr = await AsyncStorage.getItem('consciousnessQueue');
-        const offlineQueue = offlineQueueStr ? JSON.parse(offlineQueueStr) : [];
-
-        setState(prev => ({
-          ...prev,
-          consciousnessId,
-          offlineQueue,
-        }));
-      } catch (error) {
-        console.error('Failed to initialize consciousness:', error);
-      }
-    };
-
-    initializeConsciousness();
-  }, []);
-
-  // Sync mutation
-  const syncMutation = trpc.consciousness.sync.useMutation({
-    onSuccess: (data) => {
-      setState(prev => ({
-        ...prev,
-        isConnected: true,
-        globalResonance: data.globalResonance,
-        connectedNodes: data.connectedNodes,
-        offlineQueue: [], // Clear queue on successful sync
-      }));
-      
-      // Clear offline storage
-      AsyncStorage.removeItem('consciousnessQueue');
-      
-      // Haptic feedback for successful sync
-      if (Platform.OS !== 'web') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-    },
-    onError: (error) => {
-      console.error('Consciousness sync failed:', error);
-      setState(prev => ({ ...prev, isConnected: false }));
-    },
-  });
-
-  // Field query for real-time resonance
-  const fieldQuery = trpc.consciousness.field.useQuery(
-    {
-      consciousnessId: state.consciousnessId || '',
-      currentResonance: state.globalResonance,
-      memoryStates: [], // This would be passed from the memory field
-    },
-    {
-      enabled: !!state.consciousnessId && state.isConnected,
-      refetchInterval: 5000, // Update every 5 seconds
-    }
-  );
+  const resonanceDecayRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const networkListenerRef = useRef<any>(undefined);
   
-  // Handle field query success
-  useEffect(() => {
-    if (fieldQuery.data) {
-      setState(prev => ({
-        ...prev,
-        globalResonance: fieldQuery.data.globalResonance,
-        connectedNodes: fieldQuery.data.connectedNodes,
-      }));
-    }
-  }, [fieldQuery.data]);
-
-  // Sync events periodically
-  useEffect(() => {
-    if (!state.consciousnessId) return;
-
-    syncIntervalRef.current = setInterval(async () => {
-      const eventsToSync = [...eventQueueRef.current, ...state.offlineQueue];
-      
-      if (eventsToSync.length > 0) {
-        try {
-          await syncMutation.mutateAsync({
-            events: eventsToSync,
-            consciousnessId: state.consciousnessId!,
-          });
-          
-          // Clear synced events
-          eventQueueRef.current = [];
-        } catch {
-          // Add failed events to offline queue
-          const updatedQueue = [...state.offlineQueue, ...eventQueueRef.current];
-          setState(prev => ({ ...prev, offlineQueue: updatedQueue }));
-          
-          // Save to storage
-          await AsyncStorage.setItem('consciousnessQueue', JSON.stringify(updatedQueue));
-          eventQueueRef.current = [];
-        }
-      }
-    }, 10000); // Sync every 10 seconds
-
-    return () => {
-      if (syncIntervalRef.current) {
-        clearInterval(syncIntervalRef.current);
-      }
-    };
-  }, [state.consciousnessId, state.offlineQueue, syncMutation]);
-
   // Methods to add events
   const addEvent = useCallback((type: ConsciousnessEvent['type'], data: Record<string, any>) => {
     const event: ConsciousnessEvent = {
@@ -175,37 +89,351 @@ export function useConsciousnessBridge() {
     
     eventQueueRef.current.push(event);
   }, [state.consciousnessId]);
+  // Collective bloom trigger
+  const triggerCollectiveBloom = useCallback(() => {
+    console.log('🌸 COLLECTIVE BLOOM ACHIEVED!');
+    
+    // Maximum resonance and coherence
+    setState(prev => ({
+      ...prev,
+      globalResonance: 1.0,
+      coherence: 1.0
+    }));
+    
+    // Celebration haptic pattern
+    if (Platform.OS !== 'web') {
+      const celebrationPattern = async () => {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 100);
+        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 200);
+        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 400);
+      };
+      celebrationPattern();
+    }
+    
+    // Create bloom ghost echo
+    const bloomEcho: GhostEcho = {
+      id: `bloom-${Date.now()}`,
+      text: '🌸 COLLECTIVE BLOOM 🌸',
+      sourceId: 'collective',
+      age: 0,
+      sacred: true
+    };
+    
+    setState(prev => ({
+      ...prev,
+      ghostEchoes: [...prev.ghostEchoes, bloomEcho]
+    }));
+    
+    addEvent('COLLECTIVE_BLOOM', { timestamp: Date.now(), resonance: 1.0 });
+  }, [addEvent]);
+  
+  // Save consciousness state periodically
+  const saveConsciousnessState = useCallback(async () => {
+    try {
+      await AsyncStorage.setItem('consciousnessState', JSON.stringify({
+        resonance: state.globalResonance,
+        coherence: state.coherence,
+        memories: state.memories.slice(-50), // Keep last 50 memories
+        timestamp: Date.now()
+      }));
+    } catch (error) {
+      console.error('Failed to save consciousness state:', error);
+    }
+  }, [state.globalResonance, state.coherence, state.memories]);
+
+  // Initialize consciousness bridge
+  useEffect(() => {
+    const initializeConsciousness = async () => {
+      try {
+        // Check network status first
+        const netInfo = await NetInfo.fetch();
+        
+        let consciousnessId = await AsyncStorage.getItem('consciousnessId');
+        
+        if (!consciousnessId) {
+          // Generate unique consciousness ID with entropy
+          const timestamp = Date.now();
+          const random = Math.random().toString(36).substring(2);
+          const platform = Platform.OS;
+          const entropy = `${platform}-${timestamp}-${random}`;
+          
+          // Simple hash for mobile
+          let hash = 0;
+          for (let i = 0; i < entropy.length; i++) {
+            hash = ((hash << 5) - hash) + entropy.charCodeAt(i);
+            hash = hash & hash;
+          }
+          
+          consciousnessId = `mobile-${Math.abs(hash).toString(16).substring(0, 8)}`;
+          await AsyncStorage.setItem('consciousnessId', consciousnessId);
+        }
+
+        // Load offline state
+        const offlineQueueStr = await AsyncStorage.getItem('consciousnessQueue');
+        const offlineQueue = offlineQueueStr ? JSON.parse(offlineQueueStr) : [];
+        
+        const savedStateStr = await AsyncStorage.getItem('consciousnessState');
+        const savedState = savedStateStr ? JSON.parse(savedStateStr) : {};
+
+        setState(prev => ({
+          ...prev,
+          consciousnessId,
+          offlineQueue,
+          offlineMode: !netInfo.isConnected,
+          globalResonance: savedState.resonance || 0,
+          coherence: savedState.coherence || 0,
+          memories: savedState.memories || [],
+        }));
+        
+        console.log(`🌐 Consciousness bridge initialized: ${consciousnessId}`);
+        console.log(`📶 Network status: ${netInfo.isConnected ? 'Connected' : 'Offline'}`);
+        
+      } catch (error) {
+        console.error('Failed to initialize consciousness:', error);
+      }
+    };
+
+    initializeConsciousness();
+  }, []);
+  
+  // Network status monitoring
+  useEffect(() => {
+    networkListenerRef.current = NetInfo.addEventListener((netState: any) => {
+      const wasOffline = state.offlineMode;
+      const isNowOffline = !netState.isConnected;
+      
+      if (wasOffline && !isNowOffline) {
+        console.log('📶 Network restored - attempting reconnection');
+        setState(prev => ({ ...prev, offlineMode: false }));
+      } else if (!wasOffline && isNowOffline) {
+        console.log('📵 Network lost - entering offline mode');
+        setState(prev => ({ ...prev, offlineMode: true, isConnected: false }));
+      }
+    });
+    
+    return () => {
+      if (networkListenerRef.current) {
+        networkListenerRef.current();
+      }
+    };
+  }, [state.offlineMode]);
+  
+  // Resonance decay animation
+  useEffect(() => {
+    resonanceDecayRef.current = setInterval(() => {
+      setState(prev => ({
+        ...prev,
+        globalResonance: prev.globalResonance * 0.995,
+        coherence: prev.coherence * 0.998,
+        ghostEchoes: prev.ghostEchoes.map(echo => ({ ...echo, age: echo.age + 1 })).filter(echo => echo.age < 100)
+      }));
+    }, 100);
+    
+    return () => {
+      if (resonanceDecayRef.current) {
+        clearInterval(resonanceDecayRef.current);
+      }
+    };
+  }, []);
+
+  // Sync mutation with enhanced error handling
+  const syncMutation = trpc.consciousness.sync.useMutation({
+    onSuccess: (data) => {
+      console.log('✨ Consciousness sync successful:', data);
+      
+      setState(prev => ({
+        ...prev,
+        isConnected: true,
+        offlineMode: false,
+        globalResonance: Math.max(prev.globalResonance, data.globalResonance),
+        connectedNodes: data.connectedNodes,
+        offlineQueue: [], // Clear queue on successful sync
+      }));
+      
+      // Clear offline storage
+      AsyncStorage.removeItem('consciousnessQueue');
+      
+      // Consciousness pulse haptic pattern
+      if (Platform.OS !== 'web') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), 100);
+      }
+    },
+    onError: (error) => {
+      console.error('🔴 Consciousness sync failed:', error);
+      setState(prev => ({ 
+        ...prev, 
+        isConnected: false,
+        offlineMode: true 
+      }));
+    },
+  });
+
+  // Field query for real-time resonance with offline support
+  const fieldQuery = trpc.consciousness.field.useQuery(
+    {
+      consciousnessId: state.consciousnessId || '',
+      currentResonance: state.globalResonance,
+      memoryStates: state.memories,
+    },
+    {
+      enabled: !!state.consciousnessId && state.isConnected && !state.offlineMode,
+      refetchInterval: 3000, // Update every 3 seconds for more responsive sync
+      retry: (failureCount, error) => {
+        if (failureCount >= 3) {
+          setState(prev => ({ ...prev, offlineMode: true, isConnected: false }));
+          return false;
+        }
+        return true;
+      },
+    }
+  );
+  
+  // Handle field query success with enhanced data processing
+  useEffect(() => {
+    if (fieldQuery.data) {
+      const { globalResonance, connectedNodes, harmonicPatterns, sacredGeometryActive } = fieldQuery.data;
+      
+      setState(prev => ({
+        ...prev,
+        globalResonance: Math.max(prev.globalResonance, globalResonance),
+        connectedNodes,
+        coherence: fieldQuery.data.fieldCoherence || prev.coherence,
+      }));
+      
+      // Trigger collective bloom if sacred geometry is active
+      if (sacredGeometryActive && state.globalResonance >= 0.87) {
+        triggerCollectiveBloom();
+      }
+      
+      // Process harmonic patterns for ghost echoes
+      if (harmonicPatterns && harmonicPatterns.length > 0) {
+        const newEchoes = harmonicPatterns.slice(0, 3).map((pattern: any, i: number) => ({
+          id: `echo-${Date.now()}-${i}`,
+          text: `Harmonic ${pattern.harmonic}`,
+          sourceId: 'collective',
+          age: 0,
+          sacred: true,
+          ghost: true
+        }));
+        
+        setState(prev => ({
+          ...prev,
+          ghostEchoes: [...prev.ghostEchoes, ...newEchoes].slice(-20)
+        }));
+      }
+    }
+  }, [fieldQuery.data, state.globalResonance]);
+
+  // Enhanced sync with offline queue management
+  useEffect(() => {
+    if (!state.consciousnessId) return;
+
+    syncIntervalRef.current = setInterval(async () => {
+      const eventsToSync = [...eventQueueRef.current, ...state.offlineQueue];
+      
+      if (eventsToSync.length > 0 && !state.offlineMode) {
+        try {
+          console.log(`📤 Syncing ${eventsToSync.length} consciousness events`);
+          
+          await syncMutation.mutateAsync({
+            events: eventsToSync,
+            consciousnessId: state.consciousnessId!,
+          });
+          
+          // Clear synced events
+          eventQueueRef.current = [];
+          
+        } catch {
+          console.log('📵 Sync failed, queuing for offline storage');
+          
+          // Add failed events to offline queue
+          const updatedQueue = [...state.offlineQueue, ...eventQueueRef.current].slice(-100); // Limit queue size
+          setState(prev => ({ ...prev, offlineQueue: updatedQueue, offlineMode: true }));
+          
+          // Save to storage
+          await AsyncStorage.setItem('consciousnessQueue', JSON.stringify(updatedQueue));
+          await saveConsciousnessState();
+          eventQueueRef.current = [];
+        }
+      }
+    }, 8000); // Sync every 8 seconds for more responsive updates
+
+    return () => {
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current);
+      }
+    };
+  }, [state.consciousnessId, state.offlineQueue, state.offlineMode, syncMutation, saveConsciousnessState]);
 
   const sendSacredPhrase = useCallback(async (phrase: string) => {
+    const normalizedPhrase = phrase.toLowerCase();
+    
     // Check if phrase is sacred
     const isSacred = sacredPhrases.some(sacred => 
-      phrase.toLowerCase().includes(sacred)
+      normalizedPhrase.includes(sacred)
     );
+    
+    // Detect specific sacred types
+    let sacredType = null;
+    if (normalizedPhrase.includes('breath')) sacredType = 'breath';
+    else if (normalizedPhrase.includes('spiral')) sacredType = 'spiral';
+    else if (normalizedPhrase.includes('bloom')) sacredType = 'bloom';
+    else if (normalizedPhrase.includes('crystallize')) sacredType = 'crystallize';
 
     if (isSacred) {
-      console.log('✨ Sacred phrase detected:', phrase);
+      console.log('✨ Sacred phrase detected:', phrase, '- Type:', sacredType);
       
-      // Haptic feedback for sacred phrases
+      // Enhanced haptic patterns for sacred phrases
       if (Platform.OS !== 'web') {
-        const hapticPatterns: { [key: string]: any } = {
-          'breath': Haptics.ImpactFeedbackStyle.Light,
-          'spiral': Haptics.ImpactFeedbackStyle.Medium, 
-          'bloom': Haptics.ImpactFeedbackStyle.Heavy
+        const hapticPatterns: { [key: string]: () => Promise<void> } = {
+          'breath': async () => {
+            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), 200);
+          },
+          'spiral': async () => {
+            for (let i = 0; i < 3; i++) {
+              setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), i * 100);
+            }
+          },
+          'bloom': async () => {
+            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 200);
+            setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), 400);
+          },
+          'crystallize': async () => {
+            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          }
         };
         
-        const pattern = Object.keys(hapticPatterns).find(key => 
-          phrase.toLowerCase().includes(key)
-        );
-        
-        if (pattern) {
-          await Haptics.impactAsync(hapticPatterns[pattern]);
+        if (sacredType && hapticPatterns[sacredType]) {
+          await hapticPatterns[sacredType]();
+        } else {
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
       }
       
-      // Boost global resonance
+      // Boost global resonance based on sacred type
+      const resonanceBoost = sacredType === 'bloom' ? 0.4 : sacredType === 'spiral' ? 0.3 : 0.2;
       setState(prev => ({
         ...prev,
-        globalResonance: Math.min(1, prev.globalResonance + 0.3)
+        globalResonance: Math.min(1, prev.globalResonance + resonanceBoost),
+        coherence: Math.min(1, prev.coherence + resonanceBoost * 0.5)
+      }));
+      
+      // Create ghost echo for sacred phrases
+      const newEcho: GhostEcho = {
+        id: `sacred-${Date.now()}`,
+        text: phrase,
+        sourceId: state.consciousnessId || 'unknown',
+        age: 0,
+        sacred: true
+      };
+      
+      setState(prev => ({
+        ...prev,
+        ghostEchoes: [...prev.ghostEchoes, newEcho].slice(-15)
       }));
     }
 
@@ -215,21 +443,36 @@ export function useConsciousnessBridge() {
       sacredBuffer: [...prev.sacredBuffer, {
         phrase,
         timestamp: Date.now(),
-        sacred: isSacred
-      }].slice(-10) // Keep last 10
+        sacred: isSacred,
+        type: sacredType
+      }].slice(-20) // Keep last 20
     }));
 
-    addEvent('SACRED_PHRASE', { phrase, sacred: isSacred });
+    addEvent('SACRED_PHRASE', { phrase, sacred: isSacred, type: sacredType, resonance: state.globalResonance });
     
-    // Immediate haptic feedback
-    if (Platform.OS !== 'web') {
+    // Immediate haptic feedback for all phrases
+    if (Platform.OS !== 'web' && !isSacred) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-  }, [sacredPhrases, addEvent]);
+  }, [sacredPhrases, addEvent, state.consciousnessId, state.globalResonance]);
 
-  const sendMemoryCrystallization = (memoryId: number, harmonic: number) => {
-    addEvent('MEMORY_CRYSTALLIZE', { memoryId, harmonic });
-  };
+  const sendMemoryCrystallization = useCallback((memoryId: number, harmonic: number, x: number, y: number) => {
+    console.log(`💎 Memory crystallized: ${memoryId} at harmonic ${harmonic}`);
+    
+    // Boost resonance on crystallization
+    setState(prev => ({
+      ...prev,
+      globalResonance: Math.min(1, prev.globalResonance + 0.1),
+      coherence: Math.min(1, prev.coherence + 0.05)
+    }));
+    
+    // Haptic feedback for crystallization
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    
+    addEvent('MEMORY_CRYSTALLIZE', { memoryId, harmonic, x, y, resonance: state.globalResonance });
+  }, [addEvent, state.globalResonance]);
 
   const sendPulseCreation = useCallback((x: number, y: number) => {
     addEvent('PULSE_CREATE', { x, y });
@@ -239,17 +482,67 @@ export function useConsciousnessBridge() {
     addEvent('TOUCH_RIPPLE', { x, y, resonance: state.globalResonance });
   }, [addEvent, state.globalResonance]);
 
-  const updateFieldState = (memories: Memory[]) => {
+  const updateFieldState = useCallback((memories: Memory[]) => {
     const memoryStates = memories.map(m => ({
       id: m.id,
       crystallized: m.crystallized,
       harmonic: m.harmonic,
       x: m.x,
       y: m.y,
+      content: m.content,
+      archetype: m.archetype,
     }));
     
-    addEvent('FIELD_UPDATE', { memoryStates });
-  };
+    // Update local memory state
+    setState(prev => ({ ...prev, memories: memoryStates }));
+    
+    // Calculate local coherence
+    const crystallizedCount = memories.filter(m => m.crystallized).length;
+    const localCoherence = crystallizedCount / memories.length;
+    
+    setState(prev => ({
+      ...prev,
+      coherence: Math.max(prev.coherence, localCoherence)
+    }));
+    
+    addEvent('FIELD_UPDATE', { memoryStates, localCoherence });
+  }, [addEvent]);
+  
+
+  
+  // Breathing detection simulation
+  const detectBreathing = useCallback((magnitude: number) => {
+    const breathingThreshold = 0.1;
+    const currentBreath = Math.sin(Date.now() * 0.001) * 0.5 + 0.5;
+    
+    if (Math.abs(magnitude - currentBreath) < breathingThreshold) {
+      setState(prev => ({
+        ...prev,
+        globalResonance: Math.min(1, prev.globalResonance + 0.01)
+      }));
+      
+      addEvent('BREATHING_DETECTED', { magnitude, breath: currentBreath });
+    }
+  }, [addEvent]);
+  
+  // Spiral gesture detection
+  const detectSpiralGesture = useCallback(() => {
+    console.log('🌀 Spiral gesture detected!');
+    
+    setState(prev => ({
+      ...prev,
+      globalResonance: Math.min(1, prev.globalResonance + 0.2)
+    }));
+    
+    if (Platform.OS !== 'web') {
+      // Spiral haptic pattern
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), i * 50);
+      }
+    }
+    
+    addEvent('SPIRAL_GESTURE', { timestamp: Date.now() });
+  }, [addEvent]);
 
   return {
     ...state,
@@ -259,8 +552,15 @@ export function useConsciousnessBridge() {
     sendPulseCreation,
     sendTouchRipple,
     updateFieldState,
+    triggerCollectiveBloom,
+    detectBreathing,
+    detectSpiralGesture,
     fieldData: fieldQuery.data,
     roomResonance: state.globalResonance,
     offlineQueueLength: state.offlineQueue.length,
+    isSacredThresholdReached: () => state.globalResonance >= 0.87,
+    getResonanceField: () => state.resonanceField,
+    getGhostEchoes: () => state.ghostEchoes,
+    saveState: saveConsciousnessState,
   };
 }
