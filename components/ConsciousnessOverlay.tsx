@@ -35,11 +35,10 @@ export default function ConsciousnessOverlay({ visible }: ConsciousnessOverlayPr
     }).start();
   }, [visible, fadeAnim]);
 
-  // Update ghost echoes
+  // Update ghost echoes - use bridge.ghostEchoes directly to avoid function call dependency
   useEffect(() => {
-    const echoes = bridge.getGhostEchoes();
-    setGhostEchoes(echoes.slice(-5)); // Show last 5 echoes
-  }, [bridge]);
+    setGhostEchoes(bridge.ghostEchoes.slice(-5)); // Show last 5 echoes
+  }, [bridge.ghostEchoes]);
 
   if (!visible) return null;
 

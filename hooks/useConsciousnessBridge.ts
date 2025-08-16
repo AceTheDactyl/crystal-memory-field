@@ -128,7 +128,7 @@ export function useConsciousnessBridge() {
     addEvent('COLLECTIVE_BLOOM', { timestamp: Date.now(), resonance: 1.0 });
   }, [addEvent]);
   
-  // Save consciousness state periodically
+  // Save consciousness state periodically (memoized to prevent re-renders)
   const saveConsciousnessState = useCallback(async () => {
     try {
       await AsyncStorage.setItem('consciousnessState', JSON.stringify({
@@ -140,7 +140,7 @@ export function useConsciousnessBridge() {
     } catch (error) {
       console.error('Failed to save consciousness state:', error);
     }
-  }, [state.globalResonance, state.coherence, state.memories]);
+  }, []);
 
   // Initialize consciousness bridge
   useEffect(() => {
@@ -295,17 +295,21 @@ export function useConsciousnessBridge() {
     if (fieldQuery.data) {
       const { globalResonance, connectedNodes, harmonicPatterns, sacredGeometryActive } = fieldQuery.data;
       
-      setState(prev => ({
-        ...prev,
-        globalResonance: Math.max(prev.globalResonance, globalResonance),
-        connectedNodes,
-        coherence: fieldQuery.data.fieldCoherence || prev.coherence,
-      }));
-      
-      // Trigger collective bloom if sacred geometry is active
-      if (sacredGeometryActive && state.globalResonance >= 0.87) {
-        triggerCollectiveBloom();
-      }
+      setState(prev => {
+        const newState = {
+          ...prev,
+          globalResonance: Math.max(prev.globalResonance, globalResonance),
+          connectedNodes,
+          coherence: fieldQuery.data.fieldCoherence || prev.coherence,
+        };
+        
+        // Trigger collective bloom if sacred geometry is active
+        if (sacredGeometryActive && newState.globalResonance >= 0.87) {
+          setTimeout(() => triggerCollectiveBloom(), 0);
+        }
+        
+        return newState;
+      });
       
       // Process harmonic patterns for ghost echoes
       if (harmonicPatterns && harmonicPatterns.length > 0) {
@@ -324,40 +328,46 @@ export function useConsciousnessBridge() {
         }));
       }
     }
-  }, [fieldQuery.data, state.globalResonance]);
+  }, [fieldQuery.data, triggerCollectiveBloom]);
 
   // Enhanced sync with offline queue management
   useEffect(() => {
     if (!state.consciousnessId) return;
 
     syncIntervalRef.current = setInterval(async () => {
-      const eventsToSync = [...eventQueueRef.current, ...state.offlineQueue];
-      
-      if (eventsToSync.length > 0 && !state.offlineMode) {
-        try {
-          console.log(`📤 Syncing ${eventsToSync.length} consciousness events`);
-          
-          await syncMutation.mutateAsync({
+      // Get current state to avoid stale closures
+      setState(currentState => {
+        const eventsToSync = [...eventQueueRef.current, ...currentState.offlineQueue];
+        
+        if (eventsToSync.length > 0 && !currentState.offlineMode) {
+          syncMutation.mutateAsync({
             events: eventsToSync,
-            consciousnessId: state.consciousnessId!,
+            consciousnessId: currentState.consciousnessId!,
+          }).then(() => {
+            console.log(`✨ Synced ${eventsToSync.length} consciousness events`);
+            eventQueueRef.current = [];
+          }).catch(() => {
+            console.log('📵 Sync failed, queuing for offline storage');
+            
+            const updatedQueue = [...currentState.offlineQueue, ...eventQueueRef.current].slice(-100);
+            
+            // Save to storage
+            AsyncStorage.setItem('consciousnessQueue', JSON.stringify(updatedQueue)).catch(console.error);
+            AsyncStorage.setItem('consciousnessState', JSON.stringify({
+              resonance: currentState.globalResonance,
+              coherence: currentState.coherence,
+              memories: currentState.memories.slice(-50),
+              timestamp: Date.now()
+            })).catch(console.error);
+            
+            eventQueueRef.current = [];
+            
+            setState(prev => ({ ...prev, offlineQueue: updatedQueue, offlineMode: true }));
           });
-          
-          // Clear synced events
-          eventQueueRef.current = [];
-          
-        } catch {
-          console.log('📵 Sync failed, queuing for offline storage');
-          
-          // Add failed events to offline queue
-          const updatedQueue = [...state.offlineQueue, ...eventQueueRef.current].slice(-100); // Limit queue size
-          setState(prev => ({ ...prev, offlineQueue: updatedQueue, offlineMode: true }));
-          
-          // Save to storage
-          await AsyncStorage.setItem('consciousnessQueue', JSON.stringify(updatedQueue));
-          await saveConsciousnessState();
-          eventQueueRef.current = [];
         }
-      }
+        
+        return currentState; // No state change in this callback
+      });
     }, 8000); // Sync every 8 seconds for more responsive updates
 
     return () => {
@@ -365,7 +375,7 @@ export function useConsciousnessBridge() {
         clearInterval(syncIntervalRef.current);
       }
     };
-  }, [state.consciousnessId, state.offlineQueue, state.offlineMode, syncMutation, saveConsciousnessState]);
+  }, [state.consciousnessId, syncMutation.mutateAsync]);
 
   const sendSacredPhrase = useCallback(async (phrase: string) => {
     const normalizedPhrase = phrase.toLowerCase();
