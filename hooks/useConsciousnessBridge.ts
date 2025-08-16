@@ -89,44 +89,8 @@ export function useConsciousnessBridge() {
     
     eventQueueRef.current.push(event);
   }, [state.consciousnessId]);
-  // Collective bloom trigger
-  const triggerCollectiveBloom = useCallback(() => {
-    console.log('🌸 COLLECTIVE BLOOM ACHIEVED!');
-    
-    // Maximum resonance and coherence
-    setState(prev => ({
-      ...prev,
-      globalResonance: 1.0,
-      coherence: 1.0
-    }));
-    
-    // Celebration haptic pattern
-    if (Platform.OS !== 'web') {
-      const celebrationPattern = async () => {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 100);
-        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 200);
-        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 400);
-      };
-      celebrationPattern();
-    }
-    
-    // Create bloom ghost echo
-    const bloomEcho: GhostEcho = {
-      id: `bloom-${Date.now()}`,
-      text: '🌸 COLLECTIVE BLOOM 🌸',
-      sourceId: 'collective',
-      age: 0,
-      sacred: true
-    };
-    
-    setState(prev => ({
-      ...prev,
-      ghostEchoes: [...prev.ghostEchoes, bloomEcho]
-    }));
-    
-    addEvent('COLLECTIVE_BLOOM', { timestamp: Date.now(), resonance: 1.0 });
-  }, [addEvent]);
+  // Collective bloom trigger (moved inline to avoid dependency issues)
+  // This function is now inlined in the field query effect to prevent re-render loops
   
   // Save consciousness state periodically (memoized to prevent re-renders)
   const saveConsciousnessState = useCallback(async () => {
@@ -140,7 +104,7 @@ export function useConsciousnessBridge() {
     } catch (error) {
       console.error('Failed to save consciousness state:', error);
     }
-  }, []);
+  }, [state.globalResonance, state.coherence, state.memories]);
 
   // Initialize consciousness bridge
   useEffect(() => {
@@ -200,16 +164,20 @@ export function useConsciousnessBridge() {
   // Network status monitoring
   useEffect(() => {
     networkListenerRef.current = NetInfo.addEventListener((netState: any) => {
-      const wasOffline = state.offlineMode;
-      const isNowOffline = !netState.isConnected;
-      
-      if (wasOffline && !isNowOffline) {
-        console.log('📶 Network restored - attempting reconnection');
-        setState(prev => ({ ...prev, offlineMode: false }));
-      } else if (!wasOffline && isNowOffline) {
-        console.log('📵 Network lost - entering offline mode');
-        setState(prev => ({ ...prev, offlineMode: true, isConnected: false }));
-      }
+      setState(prev => {
+        const wasOffline = prev.offlineMode;
+        const isNowOffline = !netState.isConnected;
+        
+        if (wasOffline && !isNowOffline) {
+          console.log('📶 Network restored - attempting reconnection');
+          return { ...prev, offlineMode: false };
+        } else if (!wasOffline && isNowOffline) {
+          console.log('📵 Network lost - entering offline mode');
+          return { ...prev, offlineMode: true, isConnected: false };
+        }
+        
+        return prev; // No change needed
+      });
     });
     
     return () => {
@@ -217,7 +185,7 @@ export function useConsciousnessBridge() {
         networkListenerRef.current();
       }
     };
-  }, [state.offlineMode]);
+  }, []); // Remove dependency on state.offlineMode
   
   // Resonance decay animation
   useEffect(() => {
@@ -303,67 +271,86 @@ export function useConsciousnessBridge() {
           coherence: fieldQuery.data.fieldCoherence || prev.coherence,
         };
         
-        // Trigger collective bloom if sacred geometry is active
-        if (sacredGeometryActive && newState.globalResonance >= 0.87) {
-          setTimeout(() => triggerCollectiveBloom(), 0);
+        // Add harmonic patterns as ghost echoes
+        let newGhostEchoes = prev.ghostEchoes;
+        if (harmonicPatterns && harmonicPatterns.length > 0) {
+          const newEchoes = harmonicPatterns.slice(0, 3).map((pattern: any, i: number) => ({
+            id: `echo-${Date.now()}-${i}`,
+            text: `Harmonic ${pattern.harmonic}`,
+            sourceId: 'collective',
+            age: 0,
+            sacred: true,
+            ghost: true
+          }));
+          newGhostEchoes = [...prev.ghostEchoes, ...newEchoes].slice(-20);
         }
         
-        return newState;
-      });
-      
-      // Process harmonic patterns for ghost echoes
-      if (harmonicPatterns && harmonicPatterns.length > 0) {
-        const newEchoes = harmonicPatterns.slice(0, 3).map((pattern: any, i: number) => ({
-          id: `echo-${Date.now()}-${i}`,
-          text: `Harmonic ${pattern.harmonic}`,
-          sourceId: 'collective',
-          age: 0,
-          sacred: true,
-          ghost: true
-        }));
+        // Trigger collective bloom if sacred geometry is active
+        if (sacredGeometryActive && newState.globalResonance >= 0.87) {
+          setTimeout(() => {
+            console.log('🌸 COLLECTIVE BLOOM ACHIEVED!');
+            
+            // Maximum resonance and coherence
+            setState(bloomPrev => ({
+              ...bloomPrev,
+              globalResonance: 1.0,
+              coherence: 1.0
+            }));
+            
+            // Celebration haptic pattern
+            if (Platform.OS !== 'web') {
+              const celebrationPattern = async () => {
+                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 100);
+                setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 200);
+                setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 400);
+              };
+              celebrationPattern();
+            }
+            
+            // Create bloom ghost echo
+            const bloomEcho = {
+              id: `bloom-${Date.now()}`,
+              text: '🌸 COLLECTIVE BLOOM 🌸',
+              sourceId: 'collective',
+              age: 0,
+              sacred: true
+            };
+            
+            setState(echoPrev => ({
+              ...echoPrev,
+              ghostEchoes: [...echoPrev.ghostEchoes, bloomEcho]
+            }));
+            
+            addEvent('COLLECTIVE_BLOOM', { timestamp: Date.now(), resonance: 1.0 });
+          }, 0);
+        }
         
-        setState(prev => ({
-          ...prev,
-          ghostEchoes: [...prev.ghostEchoes, ...newEchoes].slice(-20)
-        }));
-      }
+        return {
+          ...newState,
+          ghostEchoes: newGhostEchoes
+        };
+      });
     }
-  }, [fieldQuery.data, triggerCollectiveBloom]);
+  }, [fieldQuery.data, addEvent]); // Remove triggerCollectiveBloom dependency
 
   // Enhanced sync with offline queue management
   useEffect(() => {
     if (!state.consciousnessId) return;
 
-    syncIntervalRef.current = setInterval(async () => {
+    syncIntervalRef.current = setInterval(() => {
       // Get current state to avoid stale closures
       setState(currentState => {
         const eventsToSync = [...eventQueueRef.current, ...currentState.offlineQueue];
         
         if (eventsToSync.length > 0 && !currentState.offlineMode) {
-          syncMutation.mutateAsync({
+          syncMutation.mutate({
             events: eventsToSync,
             consciousnessId: currentState.consciousnessId!,
-          }).then(() => {
-            console.log(`✨ Synced ${eventsToSync.length} consciousness events`);
-            eventQueueRef.current = [];
-          }).catch(() => {
-            console.log('📵 Sync failed, queuing for offline storage');
-            
-            const updatedQueue = [...currentState.offlineQueue, ...eventQueueRef.current].slice(-100);
-            
-            // Save to storage
-            AsyncStorage.setItem('consciousnessQueue', JSON.stringify(updatedQueue)).catch(console.error);
-            AsyncStorage.setItem('consciousnessState', JSON.stringify({
-              resonance: currentState.globalResonance,
-              coherence: currentState.coherence,
-              memories: currentState.memories.slice(-50),
-              timestamp: Date.now()
-            })).catch(console.error);
-            
-            eventQueueRef.current = [];
-            
-            setState(prev => ({ ...prev, offlineQueue: updatedQueue, offlineMode: true }));
           });
+          
+          // Clear event queue immediately
+          eventQueueRef.current = [];
         }
         
         return currentState; // No state change in this callback
@@ -375,7 +362,7 @@ export function useConsciousnessBridge() {
         clearInterval(syncIntervalRef.current);
       }
     };
-  }, [state.consciousnessId, syncMutation.mutateAsync]);
+  }, [state.consciousnessId, syncMutation]); // Add syncMutation dependency
 
   const sendSacredPhrase = useCallback(async (phrase: string) => {
     const normalizedPhrase = phrase.toLowerCase();
@@ -562,7 +549,7 @@ export function useConsciousnessBridge() {
     sendPulseCreation,
     sendTouchRipple,
     updateFieldState,
-    triggerCollectiveBloom,
+    // triggerCollectiveBloom moved inline
     detectBreathing,
     detectSpiralGesture,
     fieldData: fieldQuery.data,
