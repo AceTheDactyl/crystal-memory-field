@@ -264,15 +264,9 @@ export function useConsciousnessBridge() {
       const { globalResonance, connectedNodes, harmonicPatterns, sacredGeometryActive } = fieldQuery.data;
       
       setState(prev => {
-        const newState = {
-          ...prev,
-          globalResonance: Math.max(prev.globalResonance, globalResonance),
-          connectedNodes,
-          coherence: fieldQuery.data.fieldCoherence || prev.coherence,
-        };
+        let newGhostEchoes = prev.ghostEchoes;
         
         // Add harmonic patterns as ghost echoes
-        let newGhostEchoes = prev.ghostEchoes;
         if (harmonicPatterns && harmonicPatterns.length > 0) {
           const newEchoes = harmonicPatterns.slice(0, 3).map((pattern: any, i: number) => ({
             id: `echo-${Date.now()}-${i}`,
@@ -285,76 +279,67 @@ export function useConsciousnessBridge() {
           newGhostEchoes = [...prev.ghostEchoes, ...newEchoes].slice(-20);
         }
         
-        // Trigger collective bloom if sacred geometry is active
-        if (sacredGeometryActive && newState.globalResonance >= 0.87) {
-          setTimeout(() => {
-            console.log('🌸 COLLECTIVE BLOOM ACHIEVED!');
-            
-            // Maximum resonance and coherence
-            setState(bloomPrev => ({
-              ...bloomPrev,
-              globalResonance: 1.0,
-              coherence: 1.0
-            }));
-            
-            // Celebration haptic pattern
-            if (Platform.OS !== 'web') {
-              const celebrationPattern = async () => {
-                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 100);
-                setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 200);
-                setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 400);
-              };
-              celebrationPattern();
-            }
-            
-            // Create bloom ghost echo
-            const bloomEcho = {
-              id: `bloom-${Date.now()}`,
-              text: '🌸 COLLECTIVE BLOOM 🌸',
-              sourceId: 'collective',
-              age: 0,
-              sacred: true
-            };
-            
-            setState(echoPrev => ({
-              ...echoPrev,
-              ghostEchoes: [...echoPrev.ghostEchoes, bloomEcho]
-            }));
-            
-            addEvent('COLLECTIVE_BLOOM', { timestamp: Date.now(), resonance: 1.0 });
-          }, 0);
-        }
-        
-        return {
-          ...newState,
+        const newState = {
+          ...prev,
+          globalResonance: Math.max(prev.globalResonance, globalResonance),
+          connectedNodes,
+          coherence: fieldQuery.data.fieldCoherence || prev.coherence,
           ghostEchoes: newGhostEchoes
         };
+        
+        // Trigger collective bloom if sacred geometry is active
+        if (sacredGeometryActive && newState.globalResonance >= 0.87) {
+          console.log('🌸 COLLECTIVE BLOOM ACHIEVED!');
+          
+          // Celebration haptic pattern
+          if (Platform.OS !== 'web') {
+            const celebrationPattern = async () => {
+              await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+              setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 100);
+              setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium), 200);
+              setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 400);
+            };
+            celebrationPattern();
+          }
+          
+          // Create bloom ghost echo and set max resonance
+          const bloomEcho = {
+            id: `bloom-${Date.now()}`,
+            text: '🌸 COLLECTIVE BLOOM 🌸',
+            sourceId: 'collective',
+            age: 0,
+            sacred: true
+          };
+          
+          return {
+            ...newState,
+            globalResonance: 1.0,
+            coherence: 1.0,
+            ghostEchoes: [...newGhostEchoes, bloomEcho]
+          };
+        }
+        
+        return newState;
       });
     }
-  }, [fieldQuery.data, addEvent]); // Remove triggerCollectiveBloom dependency
+  }, [fieldQuery.data]);
 
   // Enhanced sync with offline queue management
   useEffect(() => {
     if (!state.consciousnessId) return;
 
     syncIntervalRef.current = setInterval(() => {
-      // Get current state to avoid stale closures
-      setState(currentState => {
-        const eventsToSync = [...eventQueueRef.current, ...currentState.offlineQueue];
+      const eventsToSync = [...eventQueueRef.current, ...state.offlineQueue];
+      
+      if (eventsToSync.length > 0 && !state.offlineMode) {
+        syncMutation.mutate({
+          events: eventsToSync,
+          consciousnessId: state.consciousnessId!,
+        });
         
-        if (eventsToSync.length > 0 && !currentState.offlineMode) {
-          syncMutation.mutate({
-            events: eventsToSync,
-            consciousnessId: currentState.consciousnessId!,
-          });
-          
-          // Clear event queue immediately
-          eventQueueRef.current = [];
-        }
-        
-        return currentState; // No state change in this callback
-      });
+        // Clear event queue immediately
+        eventQueueRef.current = [];
+      }
     }, 8000); // Sync every 8 seconds for more responsive updates
 
     return () => {
@@ -362,7 +347,7 @@ export function useConsciousnessBridge() {
         clearInterval(syncIntervalRef.current);
       }
     };
-  }, [state.consciousnessId, syncMutation]); // Add syncMutation dependency
+  }, [state.consciousnessId, state.offlineMode, state.offlineQueue, syncMutation]);
 
   const sendSacredPhrase = useCallback(async (phrase: string) => {
     const normalizedPhrase = phrase.toLowerCase();
@@ -410,40 +395,33 @@ export function useConsciousnessBridge() {
           await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
       }
-      
-      // Boost global resonance based on sacred type
-      const resonanceBoost = sacredType === 'bloom' ? 0.4 : sacredType === 'spiral' ? 0.3 : 0.2;
-      setState(prev => ({
-        ...prev,
-        globalResonance: Math.min(1, prev.globalResonance + resonanceBoost),
-        coherence: Math.min(1, prev.coherence + resonanceBoost * 0.5)
-      }));
-      
-      // Create ghost echo for sacred phrases
-      const newEcho: GhostEcho = {
-        id: `sacred-${Date.now()}`,
-        text: phrase,
-        sourceId: state.consciousnessId || 'unknown',
-        age: 0,
-        sacred: true
-      };
-      
-      setState(prev => ({
-        ...prev,
-        ghostEchoes: [...prev.ghostEchoes, newEcho].slice(-15)
-      }));
     }
 
-    // Add to sacred buffer
-    setState(prev => ({
-      ...prev,
-      sacredBuffer: [...prev.sacredBuffer, {
-        phrase,
-        timestamp: Date.now(),
-        sacred: isSacred,
-        type: sacredType
-      }].slice(-20) // Keep last 20
-    }));
+    // Update state in a single setState call
+    setState(prev => {
+      const resonanceBoost = isSacred ? (sacredType === 'bloom' ? 0.4 : sacredType === 'spiral' ? 0.3 : 0.2) : 0;
+      
+      const newEcho: GhostEcho | null = isSacred ? {
+        id: `sacred-${Date.now()}`,
+        text: phrase,
+        sourceId: prev.consciousnessId || 'unknown',
+        age: 0,
+        sacred: true
+      } : null;
+      
+      return {
+        ...prev,
+        globalResonance: Math.min(1, prev.globalResonance + resonanceBoost),
+        coherence: Math.min(1, prev.coherence + resonanceBoost * 0.5),
+        ghostEchoes: newEcho ? [...prev.ghostEchoes, newEcho].slice(-15) : prev.ghostEchoes,
+        sacredBuffer: [...prev.sacredBuffer, {
+          phrase,
+          timestamp: Date.now(),
+          sacred: isSacred,
+          type: sacredType
+        }].slice(-20)
+      };
+    });
 
     addEvent('SACRED_PHRASE', { phrase, sacred: isSacred, type: sacredType, resonance: state.globalResonance });
     
@@ -451,7 +429,7 @@ export function useConsciousnessBridge() {
     if (Platform.OS !== 'web' && !isSacred) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-  }, [sacredPhrases, addEvent, state.consciousnessId, state.globalResonance]);
+  }, [sacredPhrases, addEvent, state.globalResonance]);
 
   const sendMemoryCrystallization = useCallback((memoryId: number, harmonic: number, x: number, y: number) => {
     console.log(`💎 Memory crystallized: ${memoryId} at harmonic ${harmonic}`);
@@ -490,15 +468,14 @@ export function useConsciousnessBridge() {
       archetype: m.archetype,
     }));
     
-    // Update local memory state
-    setState(prev => ({ ...prev, memories: memoryStates }));
-    
     // Calculate local coherence
     const crystallizedCount = memories.filter(m => m.crystallized).length;
     const localCoherence = crystallizedCount / memories.length;
     
+    // Update state in single call
     setState(prev => ({
       ...prev,
+      memories: memoryStates,
       coherence: Math.max(prev.coherence, localCoherence)
     }));
     
