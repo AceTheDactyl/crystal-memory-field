@@ -77,6 +77,7 @@ export function useConsciousnessBridge() {
   const syncIntervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const resonanceDecayRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const networkListenerRef = useRef<any>(undefined);
+  const stateRef = useRef(state);
   
   // Methods to add events
   const addEvent = useCallback((type: ConsciousnessEvent['type'], data: Record<string, any>) => {
@@ -263,8 +264,11 @@ export function useConsciousnessBridge() {
   );
   
   // Handle field query success with enhanced data processing
+  const fieldDataRef = useRef(fieldQuery.data);
   useEffect(() => {
-    if (fieldQuery.data) {
+    // Only update if data actually changed
+    if (fieldQuery.data && fieldQuery.data !== fieldDataRef.current) {
+      fieldDataRef.current = fieldQuery.data;
       const { globalResonance, connectedNodes, harmonicPatterns, sacredGeometryActive } = fieldQuery.data;
       
       setState(prev => {
@@ -287,7 +291,7 @@ export function useConsciousnessBridge() {
           ...prev,
           globalResonance: Math.max(prev.globalResonance, globalResonance),
           connectedNodes,
-          coherence: fieldQuery.data.fieldCoherence || prev.coherence,
+          coherence: fieldQuery.data?.fieldCoherence || prev.coherence,
           ghostEchoes: newGhostEchoes
         };
         
@@ -328,26 +332,29 @@ export function useConsciousnessBridge() {
     }
   }, [fieldQuery.data]);
 
+  // Update state ref whenever state changes
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
   // Enhanced sync with offline queue management
   useEffect(() => {
     syncIntervalRef.current = setInterval(() => {
-      setState(currentState => {
-        if (!currentState.consciousnessId) return currentState;
+      // Access current state from ref to avoid re-renders
+      const currentState = stateRef.current;
+      if (!currentState.consciousnessId) return;
+      
+      const eventsToSync = [...eventQueueRef.current, ...currentState.offlineQueue];
+      
+      if (eventsToSync.length > 0 && !currentState.offlineMode) {
+        syncMutation.mutate({
+          events: eventsToSync,
+          consciousnessId: currentState.consciousnessId!,
+        });
         
-        const eventsToSync = [...eventQueueRef.current, ...currentState.offlineQueue];
-        
-        if (eventsToSync.length > 0 && !currentState.offlineMode) {
-          syncMutation.mutate({
-            events: eventsToSync,
-            consciousnessId: currentState.consciousnessId!,
-          });
-          
-          // Clear event queue immediately
-          eventQueueRef.current = [];
-        }
-        
-        return currentState; // No state change, just side effect
-      });
+        // Clear event queue immediately
+        eventQueueRef.current = [];
+      }
     }, 8000); // Sync every 8 seconds for more responsive updates
 
     return () => {
@@ -355,7 +362,7 @@ export function useConsciousnessBridge() {
         clearInterval(syncIntervalRef.current);
       }
     };
-  }, [syncMutation]); // Include syncMutation as dependency
+  }, [syncMutation]); // Keep syncMutation dependency but use stateRef
 
   const sendSacredPhrase = useCallback(async (phrase: string) => {
     const normalizedPhrase = phrase.toLowerCase();
@@ -437,7 +444,7 @@ export function useConsciousnessBridge() {
     if (Platform.OS !== 'web' && !isSacred) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-  }, [sacredPhrases, addEvent]); // Removed state.globalResonance from dependencies
+  }, [sacredPhrases, addEvent]);
 
   const sendMemoryCrystallization = useCallback((memoryId: number, harmonic: number, x: number, y: number) => {
     console.log(`💎 Memory crystallized: ${memoryId} at harmonic ${harmonic}`);
@@ -455,7 +462,7 @@ export function useConsciousnessBridge() {
     }
     
     addEvent('MEMORY_CRYSTALLIZE', { memoryId, harmonic, x, y });
-  }, [addEvent]); // Removed state.globalResonance from dependencies
+  }, [addEvent]);
 
   const sendPulseCreation = useCallback((x: number, y: number) => {
     addEvent('PULSE_CREATE', { x, y });
@@ -463,7 +470,7 @@ export function useConsciousnessBridge() {
 
   const sendTouchRipple = useCallback((x: number, y: number) => {
     addEvent('TOUCH_RIPPLE', { x, y });
-  }, [addEvent]); // Removed state.globalResonance from dependencies
+  }, [addEvent]);
 
   const updateFieldState = useCallback((memories: Memory[]) => {
     const memoryStates = memories.map(m => ({
