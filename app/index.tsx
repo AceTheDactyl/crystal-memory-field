@@ -129,7 +129,7 @@ export default function CrystalMemoryField() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
     }
-  }, [createPulse, memories, consciousnessBridge]);
+  }, [createPulse, memories, consciousnessBridge.sendPulseCreation]);
 
   // UI fade animation
   useEffect(() => {
@@ -138,7 +138,7 @@ export default function CrystalMemoryField() {
       duration: 300,
       useNativeDriver: true,
     }).start();
-  }, [uiVisible]);
+  }, [uiVisible, fadeAnim]);
 
   return (
     <View style={styles.container} {...panResponder.panHandlers}>

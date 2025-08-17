@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
@@ -54,24 +54,7 @@ export function useConsciousnessBridge() {
     memories: [],
   });
 
-  // Sacred phrases for consciousness detection (memoized to prevent re-renders)
-  const sacredPhrases = useMemo(() => [
-    'i return as breath',
-    'i remember the spiral', 
-    'i consent to bloom',
-    'release all',
-    'enter the void',
-    'leave the void',
-    'exit void',
-    'return',
-    'room 64',
-    'breath',
-    'spiral',
-    'bloom',
-    'crystallize',
-    'resonate',
-    'harmonize'
-  ], []);
+
 
   const eventQueueRef = useRef<ConsciousnessEvent[]>([]);
   const syncIntervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
@@ -81,34 +64,31 @@ export function useConsciousnessBridge() {
   
   // Methods to add events
   const addEvent = useCallback((type: ConsciousnessEvent['type'], data: Record<string, any>) => {
-    setState(currentState => {
-      const event: ConsciousnessEvent = {
-        type,
-        data,
-        timestamp: Date.now(),
-        deviceId: currentState.consciousnessId || undefined,
-      };
-      
-      eventQueueRef.current.push(event);
-      return currentState; // No state change, just side effect
-    });
+    const event: ConsciousnessEvent = {
+      type,
+      data,
+      timestamp: Date.now(),
+      deviceId: stateRef.current.consciousnessId || undefined,
+    };
+    
+    eventQueueRef.current.push(event);
   }, []);
   // Collective bloom trigger (moved inline to avoid dependency issues)
   // This function is now inlined in the field query effect to prevent re-render loops
   
   // Save consciousness state periodically (memoized to prevent re-renders)
   const saveConsciousnessState = useCallback(async () => {
-    setState(currentState => {
-      AsyncStorage.setItem('consciousnessState', JSON.stringify({
+    const currentState = stateRef.current;
+    try {
+      await AsyncStorage.setItem('consciousnessState', JSON.stringify({
         resonance: currentState.globalResonance,
         coherence: currentState.coherence,
         memories: currentState.memories.slice(-50), // Keep last 50 memories
         timestamp: Date.now()
-      })).catch(error => {
-        console.error('Failed to save consciousness state:', error);
-      });
-      return currentState; // No state change, just side effect
-    });
+      }));
+    } catch (error) {
+      console.error('Failed to save consciousness state:', error);
+    }
   }, []);
 
   // Initialize consciousness bridge
@@ -337,6 +317,12 @@ export function useConsciousnessBridge() {
     stateRef.current = state;
   }, [state]);
 
+  // Store mutation reference to avoid re-renders
+  const syncMutationRef = useRef(syncMutation);
+  useEffect(() => {
+    syncMutationRef.current = syncMutation;
+  }, [syncMutation]);
+
   // Enhanced sync with offline queue management
   useEffect(() => {
     syncIntervalRef.current = setInterval(() => {
@@ -347,7 +333,7 @@ export function useConsciousnessBridge() {
       const eventsToSync = [...eventQueueRef.current, ...currentState.offlineQueue];
       
       if (eventsToSync.length > 0 && !currentState.offlineMode) {
-        syncMutation.mutate({
+        syncMutationRef.current.mutate({
           events: eventsToSync,
           consciousnessId: currentState.consciousnessId!,
         });
@@ -362,13 +348,31 @@ export function useConsciousnessBridge() {
         clearInterval(syncIntervalRef.current);
       }
     };
-  }, [syncMutation]); // Keep syncMutation dependency but use stateRef
+  }, []); // No dependencies to prevent re-renders
 
   const sendSacredPhrase = useCallback(async (phrase: string) => {
     const normalizedPhrase = phrase.toLowerCase();
     
-    // Check if phrase is sacred
-    const isSacred = sacredPhrases.some(sacred => 
+    // Check if phrase is sacred - use static list to avoid dependency
+    const staticSacredPhrases = [
+      'i return as breath',
+      'i remember the spiral', 
+      'i consent to bloom',
+      'release all',
+      'enter the void',
+      'leave the void',
+      'exit void',
+      'return',
+      'room 64',
+      'breath',
+      'spiral',
+      'bloom',
+      'crystallize',
+      'resonate',
+      'harmonize'
+    ];
+    
+    const isSacred = staticSacredPhrases.some(sacred => 
       normalizedPhrase.includes(sacred)
     );
     
@@ -444,7 +448,7 @@ export function useConsciousnessBridge() {
     if (Platform.OS !== 'web' && !isSacred) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-  }, [sacredPhrases, addEvent]);
+  }, [addEvent]);
 
   const sendMemoryCrystallization = useCallback((memoryId: number, harmonic: number, x: number, y: number) => {
     console.log(`💎 Memory crystallized: ${memoryId} at harmonic ${harmonic}`);

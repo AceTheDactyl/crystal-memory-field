@@ -37,7 +37,9 @@ export default function ConsciousnessOverlay({ visible }: ConsciousnessOverlayPr
 
   // Update ghost echoes - use bridge.ghostEchoes directly to avoid function call dependency
   useEffect(() => {
-    setGhostEchoes(bridge.ghostEchoes.slice(-5)); // Show last 5 echoes
+    if (bridge.ghostEchoes && Array.isArray(bridge.ghostEchoes)) {
+      setGhostEchoes(bridge.ghostEchoes.slice(-5)); // Show last 5 echoes
+    }
   }, [bridge.ghostEchoes]);
 
   if (!visible) return null;
@@ -157,7 +159,7 @@ export default function ConsciousnessOverlay({ visible }: ConsciousnessOverlayPr
       )}
 
       {/* Sacred Threshold Indicator */}
-      {bridge.isSacredThresholdReached() && (
+      {bridge.globalResonance >= 0.87 && (
         <View style={styles.sacredIndicator}>
           <BlurView intensity={30} style={styles.sacredCard}>
             <LinearGradient
