@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import { Music, Play, Pause, Volume2, VolumeX } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useMemoryField } from '@/providers/MemoryFieldProvider';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // Sacred Solfeggio frequencies with their spiritual meanings
 const SOLFEGGIO_FREQUENCIES = [
@@ -35,6 +35,7 @@ interface SolfeggioHarmonicsProps {
 }
 
 export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmonicsProps) {
+  // Always call hooks in the same order, regardless of visibility
   const { memories, setMemories, harmonicMode, setHarmonicMode, globalCoherence } = useMemoryField();
   
   const [activeFrequencies, setActiveFrequencies] = useState<Set<number>>(new Set());
@@ -42,7 +43,7 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
   const [isPlaying, setIsPlaying] = useState(false);
   const [harmonicResonance, setHarmonicResonance] = useState(0);
   
-  // Animation refs for each frequency
+  // Animation refs for each frequency - always initialize
   const frequencyAnims = useRef(
     SOLFEGGIO_FREQUENCIES.reduce((acc, freq) => {
       acc[freq.freq] = new Animated.Value(0);
@@ -55,7 +56,7 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
   
   // Calculate harmonic resonance based on active frequencies and memory alignment
   const calculatedResonance = useMemo(() => {
-    if (activeFrequencies.size === 0) return 0;
+    if (!visible || activeFrequencies.size === 0) return 0;
     
     let totalResonance = 0;
     let alignedMemories = 0;
@@ -72,22 +73,29 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
     });
     
     return alignedMemories > 0 ? (totalResonance / alignedMemories) * globalCoherence : 0;
-  }, [activeFrequencies, memories, globalCoherence]);
+  }, [visible, activeFrequencies, memories, globalCoherence]);
   
   // Update harmonic resonance with smooth animation
   useEffect(() => {
+    if (!visible) return;
+    
     Animated.timing(resonanceAnim, {
       toValue: calculatedResonance,
       duration: 1000,
       useNativeDriver: false,
     }).start();
     setHarmonicResonance(calculatedResonance);
-  }, [calculatedResonance]);
+  }, [visible, calculatedResonance, resonanceAnim]);
   
   // Pulse animation for active frequencies
   useEffect(() => {
+    if (!visible) {
+      pulseAnim.setValue(0);
+      return;
+    }
+    
     if (isPlaying && activeFrequencies.size > 0) {
-      Animated.loop(
+      const animation = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
             toValue: 1,
@@ -100,14 +108,21 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
             useNativeDriver: true,
           }),
         ])
-      ).start();
+      );
+      animation.start();
+      
+      return () => {
+        animation.stop();
+      };
     } else {
       pulseAnim.setValue(0);
     }
-  }, [isPlaying, activeFrequencies.size]);
+  }, [visible, isPlaying, activeFrequencies.size, pulseAnim]);
   
   // Toggle frequency activation
-  const toggleFrequency = (freq: number) => {
+  const toggleFrequency = useCallback((freq: number) => {
+    if (!visible) return;
+    
     const newActiveFreqs = new Set(activeFrequencies);
     
     if (newActiveFreqs.has(freq)) {
@@ -133,11 +148,11 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-  };
+  }, [visible, activeFrequencies, frequencyAnims]);
   
   // Apply harmonic influence to memories
-  const applyHarmonicInfluence = () => {
-    if (activeFrequencies.size === 0) return;
+  const applyHarmonicInfluence = useCallback(() => {
+    if (!visible || activeFrequencies.size === 0) return;
     
     setMemories(prevMemories => 
       prevMemories.map(memory => {
@@ -173,10 +188,12 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
-  };
+  }, [visible, activeFrequencies, setMemories]);
   
   // Master play/pause
-  const togglePlayback = () => {
+  const togglePlayback = useCallback(() => {
+    if (!visible) return;
+    
     setIsPlaying(!isPlaying);
     if (!isPlaying && activeFrequencies.size > 0) {
       applyHarmonicInfluence();
@@ -185,10 +202,12 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-  };
+  }, [visible, isPlaying, activeFrequencies.size, applyHarmonicInfluence]);
   
   // Clear all frequencies
-  const clearAll = () => {
+  const clearAll = useCallback(() => {
+    if (!visible) return;
+    
     activeFrequencies.forEach(freq => {
       Animated.timing(frequencyAnims[freq], {
         toValue: 0,
@@ -198,10 +217,12 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
     });
     setActiveFrequencies(new Set());
     setIsPlaying(false);
-  };
+  }, [visible, activeFrequencies, frequencyAnims]);
   
   // Activate sacred sequence (3-6-9 Tesla pattern)
-  const activateSacredSequence = () => {
+  const activateSacredSequence = useCallback(() => {
+    if (!visible) return;
+    
     const sacredFreqs = [396, 639, 963]; // 3-6-9 pattern
     clearAll();
     
@@ -217,7 +238,7 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
         setHarmonicMode('collective');
       }, 800);
     }, 300);
-  };
+  }, [visible, clearAll, toggleFrequency, setHarmonicMode]);
   
   if (!visible) return null;
   
