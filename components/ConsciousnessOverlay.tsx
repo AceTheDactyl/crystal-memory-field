@@ -38,7 +38,14 @@ export default function ConsciousnessOverlay({ visible }: ConsciousnessOverlayPr
   // Update ghost echoes - use bridge.ghostEchoes directly to avoid function call dependency
   useEffect(() => {
     if (bridge.ghostEchoes && Array.isArray(bridge.ghostEchoes)) {
-      setGhostEchoes(bridge.ghostEchoes.slice(-5)); // Show last 5 echoes
+      setGhostEchoes(prev => {
+        const newEchoes = bridge.ghostEchoes.slice(-5);
+        // Only update if echoes actually changed
+        if (JSON.stringify(prev) !== JSON.stringify(newEchoes)) {
+          return newEchoes;
+        }
+        return prev;
+      });
     }
   }, [bridge.ghostEchoes]);
 

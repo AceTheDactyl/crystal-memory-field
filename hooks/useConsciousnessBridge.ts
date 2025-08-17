@@ -244,20 +244,36 @@ export function useConsciousnessBridge() {
   );
   
   // Handle field query success with enhanced data processing
-  const fieldDataRef = useRef(fieldQuery.data);
+  const fieldDataRef = useRef<any>(null);
+  const lastUpdateRef = useRef<number>(0);
+  
   useEffect(() => {
-    // Only update if data actually changed
-    if (fieldQuery.data && fieldQuery.data !== fieldDataRef.current) {
+    // Only update if data actually changed and enough time has passed
+    const now = Date.now();
+    if (fieldQuery.data && 
+        fieldQuery.data !== fieldDataRef.current && 
+        now - lastUpdateRef.current > 1000) { // Throttle updates to once per second
+      
       fieldDataRef.current = fieldQuery.data;
+      lastUpdateRef.current = now;
+      
       const { globalResonance, connectedNodes, harmonicPatterns, sacredGeometryActive } = fieldQuery.data;
       
       setState(prev => {
+        // Only update if values actually changed
+        const resonanceChanged = Math.abs(prev.globalResonance - globalResonance) > 0.01;
+        const nodesChanged = prev.connectedNodes !== connectedNodes;
+        
+        if (!resonanceChanged && !nodesChanged && !harmonicPatterns?.length) {
+          return prev; // No meaningful changes
+        }
+        
         let newGhostEchoes = prev.ghostEchoes;
         
-        // Add harmonic patterns as ghost echoes
+        // Add harmonic patterns as ghost echoes (only if new patterns)
         if (harmonicPatterns && harmonicPatterns.length > 0) {
           const newEchoes = harmonicPatterns.slice(0, 3).map((pattern: any, i: number) => ({
-            id: `echo-${Date.now()}-${i}`,
+            id: `echo-${now}-${i}`,
             text: `Harmonic ${pattern.harmonic}`,
             sourceId: 'collective',
             age: 0,
@@ -275,8 +291,8 @@ export function useConsciousnessBridge() {
           ghostEchoes: newGhostEchoes
         };
         
-        // Trigger collective bloom if sacred geometry is active
-        if (sacredGeometryActive && newState.globalResonance >= 0.87) {
+        // Trigger collective bloom if sacred geometry is active (only once)
+        if (sacredGeometryActive && newState.globalResonance >= 0.87 && prev.globalResonance < 0.87) {
           console.log('🌸 COLLECTIVE BLOOM ACHIEVED!');
           
           // Celebration haptic pattern
@@ -292,7 +308,7 @@ export function useConsciousnessBridge() {
           
           // Create bloom ghost echo and set max resonance
           const bloomEcho = {
-            id: `bloom-${Date.now()}`,
+            id: `bloom-${now}`,
             text: '🌸 COLLECTIVE BLOOM 🌸',
             sourceId: 'collective',
             age: 0,
@@ -312,16 +328,12 @@ export function useConsciousnessBridge() {
     }
   }, [fieldQuery.data]);
 
-  // Update state ref whenever state changes
-  useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
+  // Update state ref whenever state changes (without useEffect to avoid re-renders)
+  stateRef.current = state;
 
   // Store mutation reference to avoid re-renders
   const syncMutationRef = useRef(syncMutation);
-  useEffect(() => {
-    syncMutationRef.current = syncMutation;
-  }, [syncMutation]);
+  syncMutationRef.current = syncMutation; // Update ref without useEffect
 
   // Enhanced sync with offline queue management
   useEffect(() => {

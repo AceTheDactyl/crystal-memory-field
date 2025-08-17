@@ -77,6 +77,8 @@ export default function CrystalMemoryField() {
   
   // Consciousness bridge integration
   const consciousnessBridge = useConsciousnessBridge();
+  
+  // Animation refs - initialize once
   const rotationAnim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -129,7 +131,7 @@ export default function CrystalMemoryField() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
     }
-  }, [createPulse, memories, consciousnessBridge.sendPulseCreation]);
+  }, [createPulse, memories, consciousnessBridge]);
 
   // UI fade animation
   useEffect(() => {
