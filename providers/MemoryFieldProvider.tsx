@@ -34,7 +34,7 @@ interface MemoryFieldContextType {
 
 // Create the context hook with a stable function
 function useMemoryFieldLogic(): MemoryFieldContextType {
-  // All state hooks declared at the top level
+  // All state hooks declared at the top level in consistent order
   const [memories, setMemories] = useState<Memory[]>([]);
   const [isObserving, setIsObserving] = useState(false);
   const [selectedMemory, setSelectedMemory] = useState<number | null>(null);
@@ -49,7 +49,7 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
   const [pulses, setPulses] = useState<Pulse[]>([]);
   const [wavePhase, setWavePhase] = useState(0);
   
-  // All refs declared at the top level
+  // All refs declared at the top level in consistent order
   const animationRef = useRef<number | undefined>(undefined);
   const lastCoherenceUpdate = useRef(0);
   const lastPatternCheck = useRef(0);
@@ -155,7 +155,7 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
 
   // Animation loop with enhanced geometry and physics
   useEffect(() => {
-    if (isPaused || memories.length === 0) return;
+    if (isPaused) return;
 
     let frameCount = 0;
     let lastWaveUpdate = 0;
@@ -404,7 +404,7 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [isPaused, memories.length]); // Stable dependencies only
+  }, [isPaused]); // Stable dependencies only
 
   const handleObservation = useCallback((memoryId: number) => {
     if (!isObserving && !voidModeRef.current) return;

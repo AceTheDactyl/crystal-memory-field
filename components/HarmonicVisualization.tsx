@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useMemo } from 'react';
-import { View, StyleSheet, Animated, Dimensions } from 'react-native';
+import { View, StyleSheet, Animated, Dimensions, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Circle, Path } from 'react-native-svg';
 import { useMemoryField } from '@/providers/MemoryFieldProvider';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -10,7 +9,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SOLFEGGIO_FREQUENCIES = [174, 285, 396, 417, 528, 639, 741, 852, 963];
 
 export default function HarmonicVisualization() {
-  const { memories, globalCoherence, harmonicMode, solfeggioInfluence } = useMemoryField();
+  const { memories, globalCoherence, harmonicMode } = useMemoryField();
   
   const waveAnim = useRef(new Animated.Value(0)).current;
   const resonanceAnim = useRef(new Animated.Value(0)).current;
@@ -45,7 +44,7 @@ export default function HarmonicVisualization() {
       duration: 1000,
       useNativeDriver: false,
     }).start();
-  }, [globalCoherence]);
+  }, [globalCoherence, resonanceAnim]);
   
   // Calculate frequency distribution
   const frequencyDistribution = useMemo(() => {
@@ -81,27 +80,7 @@ export default function HarmonicVisualization() {
     });
   }, [memories]);
   
-  // Generate harmonic wave path
-  const generateWavePath = (frequency: number, amplitude: number, phase: number) => {
-    const points: string[] = [];
-    const centerY = SCREEN_HEIGHT * 0.7;
-    const waveWidth = SCREEN_WIDTH * 0.8;
-    const startX = SCREEN_WIDTH * 0.1;
-    
-    for (let i = 0; i <= 100; i++) {
-      const x = startX + (i / 100) * waveWidth;
-      const normalizedFreq = frequency / 1000; // Normalize frequency
-      const y = centerY + Math.sin((i / 100) * Math.PI * 8 * normalizedFreq + phase) * amplitude * 30;
-      
-      if (i === 0) {
-        points.push(`M ${x} ${y}`);
-      } else {
-        points.push(`L ${x} ${y}`);
-      }
-    }
-    
-    return points.join(' ');
-  };
+
   
   return (
     <View style={styles.container} pointerEvents="none">
@@ -129,33 +108,71 @@ export default function HarmonicVisualization() {
         />
       </Animated.View>
       
-      {/* Solfeggio frequency rings */}
-      <Svg width={SCREEN_WIDTH} height={SCREEN_HEIGHT} style={StyleSheet.absoluteFillObject}>
-        {solfeggioAlignment.map((freq, index) => {
-          if (freq.strength < 0.1) return null;
-          
-          const centerX = SCREEN_WIDTH / 2;
-          const centerY = SCREEN_HEIGHT / 2;
-          const baseRadius = 50 + index * 25;
-          
-          return (
-            <Animated.View key={freq.frequency}>
-              <Circle
-                cx={centerX}
-                cy={centerY}
-                r={baseRadius * (1 + freq.strength * 0.5)}
-                fill="none"
-                stroke={`hsl(${200 + (freq.frequency % 160)}, 70%, 60%)`}
-                strokeWidth={Math.max(1, freq.strength * 4)}
-                strokeOpacity={freq.strength * 0.6}
-                strokeDasharray={freq.crystallized > 0 ? undefined : "5,5"}
+      {/* Solfeggio frequency rings - Web-safe implementation */}
+      {Platform.OS !== 'web' ? (
+        <View style={StyleSheet.absoluteFillObject}>
+          {solfeggioAlignment.map((freq, index) => {
+            if (freq.strength < 0.1) return null;
+            
+            const centerX = SCREEN_WIDTH / 2;
+            const centerY = SCREEN_HEIGHT / 2;
+            const baseRadius = 50 + index * 25;
+            const finalRadius = baseRadius * (1 + freq.strength * 0.5);
+            
+            return (
+              <Animated.View
+                key={freq.frequency}
+                style={[
+                  styles.frequencyRing,
+                  {
+                    left: centerX - finalRadius,
+                    top: centerY - finalRadius,
+                    width: finalRadius * 2,
+                    height: finalRadius * 2,
+                    borderRadius: finalRadius,
+                    borderWidth: Math.max(1, freq.strength * 4),
+                    borderColor: `hsl(${200 + (freq.frequency % 160)}, 70%, 60%)`,
+                    opacity: freq.strength * 0.6,
+                    borderStyle: freq.crystallized > 0 ? 'solid' : 'dashed',
+                  },
+                ]}
               />
-            </Animated.View>
-          );
-        })}
-      </Svg>
+            );
+          })}
+        </View>
+      ) : (
+        <View style={StyleSheet.absoluteFillObject}>
+          {solfeggioAlignment.map((freq, index) => {
+            if (freq.strength < 0.1) return null;
+            
+            const centerX = SCREEN_WIDTH / 2;
+            const centerY = SCREEN_HEIGHT / 2;
+            const baseRadius = 50 + index * 25;
+            const finalRadius = baseRadius * (1 + freq.strength * 0.5);
+            
+            return (
+              <View
+                key={freq.frequency}
+                style={[
+                  styles.frequencyRing,
+                  {
+                    left: centerX - finalRadius,
+                    top: centerY - finalRadius,
+                    width: finalRadius * 2,
+                    height: finalRadius * 2,
+                    borderRadius: finalRadius,
+                    borderWidth: Math.max(1, freq.strength * 4),
+                    borderColor: `hsl(${200 + (freq.frequency % 160)}, 70%, 60%)`,
+                    opacity: freq.strength * 0.6,
+                  },
+                ]}
+              />
+            );
+          })}
+        </View>
+      )}
       
-      {/* Harmonic wave visualization */}
+      {/* Harmonic wave visualization - Simplified for web compatibility */}
       <Animated.View
         style={[
           StyleSheet.absoluteFillObject,
@@ -167,25 +184,34 @@ export default function HarmonicVisualization() {
           },
         ]}
       >
-        <Svg width={SCREEN_WIDTH} height={SCREEN_HEIGHT}>
-          {solfeggioAlignment
-            .filter(freq => freq.strength > 0.2)
-            .map((freq, index) => {
-              const phase = wavePhase.current + index * 0.5;
-              const wavePath = generateWavePath(freq.frequency, freq.strength, phase);
-              
-              return (
-                <Path
-                  key={freq.frequency}
-                  d={wavePath}
-                  fill="none"
-                  stroke={`hsl(${200 + (freq.frequency % 160)}, 70%, 60%)`}
-                  strokeWidth={Math.max(1, freq.strength * 3)}
-                  strokeOpacity={freq.strength * 0.4}
-                />
-              );
-            })}
-        </Svg>
+        {solfeggioAlignment
+          .filter(freq => freq.strength > 0.2)
+          .map((freq, index) => {
+            const phase = wavePhase.current + index * 0.5;
+            const waveHeight = freq.strength * 30;
+            
+            return (
+              <View
+                key={freq.frequency}
+                style={[
+                  styles.waveBar,
+                  {
+                    left: SCREEN_WIDTH * 0.1 + (index * (SCREEN_WIDTH * 0.8) / 9),
+                    top: SCREEN_HEIGHT * 0.7 - waveHeight / 2,
+                    width: 4,
+                    height: waveHeight,
+                    backgroundColor: `hsl(${200 + (freq.frequency % 160)}, 70%, 60%)`,
+                    opacity: freq.strength * 0.4,
+                    transform: [
+                      {
+                        scaleY: 1 + Math.sin(phase) * 0.5,
+                      },
+                    ],
+                  },
+                ]}
+              />
+            );
+          })}
       </Animated.View>
       
       {/* Frequency spectrum bars */}
@@ -285,5 +311,13 @@ const styles = StyleSheet.create({
     marginTop: -100,
     marginLeft: -100,
     borderRadius: 100,
+  },
+  frequencyRing: {
+    position: 'absolute',
+    backgroundColor: 'transparent',
+  },
+  waveBar: {
+    position: 'absolute',
+    borderRadius: 2,
   },
 });
