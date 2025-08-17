@@ -13,21 +13,11 @@ import { BlurView } from 'expo-blur';
 import { Music, Play, Pause, Volume2, VolumeX } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useMemoryField } from '@/providers/MemoryFieldProvider';
+import { useSolfeggio } from '@/providers/SolfeggioProvider';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// Sacred Solfeggio frequencies with their spiritual meanings
-const SOLFEGGIO_FREQUENCIES = [
-  { freq: 174, name: 'Foundation', color: '#8B0000', meaning: 'Pain Relief & Foundation' },
-  { freq: 285, name: 'Quantum', color: '#4B0082', meaning: 'Quantum Cognition & Healing' },
-  { freq: 396, name: 'Liberation', color: '#FF4500', meaning: 'Liberation from Fear' },
-  { freq: 417, name: 'Change', color: '#FFD700', meaning: 'Facilitating Change' },
-  { freq: 528, name: 'Love', color: '#32CD32', meaning: 'Love & DNA Repair' },
-  { freq: 639, name: 'Connection', color: '#00CED1', meaning: 'Connecting Relationships' },
-  { freq: 741, name: 'Expression', color: '#4169E1', meaning: 'Awakening Intuition' },
-  { freq: 852, name: 'Intuition', color: '#9932CC', meaning: 'Returning to Spiritual Order' },
-  { freq: 963, name: 'Unity', color: '#FF1493', meaning: 'Divine Connection' },
-];
+
 
 interface SolfeggioHarmonicsProps {
   visible: boolean;
@@ -37,43 +27,74 @@ interface SolfeggioHarmonicsProps {
 export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmonicsProps) {
   // Always call hooks in the same order, regardless of visibility
   const { memories, setMemories, harmonicMode, setHarmonicMode, globalCoherence } = useMemoryField();
+  const {
+    activeFrequencies,
+    masterVolume,
+    isPlaying,
+    quantumCoherence,
+    toggleFrequency,
+    setMasterVolume,
+    setIsPlaying,
+    stopAll,
+    playSacredSequence,
+    generateProgression,
+    getAllFrequencies
+  } = useSolfeggio();
   
-  const [activeFrequencies, setActiveFrequencies] = useState<Set<number>>(new Set());
-  const [masterVolume, setMasterVolume] = useState(0.7);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [harmonicResonance, setHarmonicResonance] = useState(0);
+  
+  // Get all frequencies from the engine
+  const solfeggioFreqs = useMemo(() => {
+    const allFreqs = getAllFrequencies();
+    return Object.entries(allFreqs).map(([key, freq]) => ({
+      key,
+      freq: freq.freq,
+      name: freq.name,
+      color: freq.color,
+      meaning: freq.meaning
+    }));
+  }, [getAllFrequencies]);
   
   // Animation refs for each frequency - always initialize
   const frequencyAnims = useRef(
-    SOLFEGGIO_FREQUENCIES.reduce((acc, freq) => {
-      acc[freq.freq] = new Animated.Value(0);
+    solfeggioFreqs.reduce((acc, freq) => {
+      acc[freq.key] = new Animated.Value(0);
       return acc;
-    }, {} as Record<number, Animated.Value>)
+    }, {} as Record<string, Animated.Value>)
   ).current;
   
   const resonanceAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(0)).current;
   
-  // Calculate harmonic resonance based on active frequencies and memory alignment
+  // Calculate harmonic resonance based on quantum coherence and memory alignment
   const calculatedResonance = useMemo(() => {
     if (!visible || activeFrequencies.size === 0) return 0;
     
-    let totalResonance = 0;
-    let alignedMemories = 0;
+    // Use quantum coherence from the engine
+    const baseResonance = quantumCoherence.coherence;
     
+    // Factor in memory alignment
+    let memoryAlignment = 0;
+    let alignedCount = 0;
+    
+    const allFreqs = getAllFrequencies();
     memories.forEach(memory => {
-      activeFrequencies.forEach(freq => {
-        const harmonicDiff = Math.abs(memory.harmonic - freq);
-        const alignment = Math.max(0, 1 - harmonicDiff / 200);
-        if (alignment > 0.3) {
-          totalResonance += alignment * (memory.crystallized ? 1.5 : 1);
-          alignedMemories++;
+      activeFrequencies.forEach(freqKey => {
+        const freq = allFreqs[freqKey];
+        if (freq) {
+          const harmonicDiff = Math.abs(memory.harmonic - freq.freq);
+          const alignment = Math.max(0, 1 - harmonicDiff / 200);
+          if (alignment > 0.3) {
+            memoryAlignment += alignment * (memory.crystallized ? 1.5 : 1);
+            alignedCount++;
+          }
         }
       });
     });
     
-    return alignedMemories > 0 ? (totalResonance / alignedMemories) * globalCoherence : 0;
-  }, [visible, activeFrequencies, memories, globalCoherence]);
+    const avgMemoryAlignment = alignedCount > 0 ? memoryAlignment / alignedCount : 0;
+    return (baseResonance * 0.7 + avgMemoryAlignment * 0.3) * globalCoherence;
+  }, [visible, activeFrequencies, memories, globalCoherence, quantumCoherence, getAllFrequencies]);
   
   // Update harmonic resonance with smooth animation
   useEffect(() => {
@@ -119,62 +140,56 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
     }
   }, [visible, isPlaying, activeFrequencies.size, pulseAnim]);
   
-  // Toggle frequency activation
-  const toggleFrequency = useCallback((freq: number) => {
+  // Toggle frequency activation with animation
+  const handleToggleFrequency = useCallback((freqKey: string) => {
     if (!visible) return;
     
-    const newActiveFreqs = new Set(activeFrequencies);
+    const isActive = activeFrequencies.has(freqKey);
     
-    if (newActiveFreqs.has(freq)) {
-      newActiveFreqs.delete(freq);
-      // Animate out
-      Animated.timing(frequencyAnims[freq], {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      newActiveFreqs.add(freq);
-      // Animate in
-      Animated.timing(frequencyAnims[freq], {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
+    // Animate
+    Animated.timing(frequencyAnims[freqKey], {
+      toValue: isActive ? 0 : 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
     
-    setActiveFrequencies(newActiveFreqs);
+    // Toggle in engine
+    toggleFrequency(freqKey);
     
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-  }, [visible, activeFrequencies, frequencyAnims]);
+  }, [visible, activeFrequencies, frequencyAnims, toggleFrequency]);
   
   // Apply harmonic influence to memories
   const applyHarmonicInfluence = useCallback(() => {
     if (!visible || activeFrequencies.size === 0) return;
     
+    const allFreqs = getAllFrequencies();
+    
     setMemories(prevMemories => 
       prevMemories.map(memory => {
         let maxInfluence = 0;
-        let influencingFreq = 0;
+        let influencingFreqKey = '';
         
-        activeFrequencies.forEach(freq => {
-          const harmonicDiff = Math.abs(memory.harmonic - freq);
-          const influence = Math.max(0, 1 - harmonicDiff / 300);
-          if (influence > maxInfluence) {
-            maxInfluence = influence;
-            influencingFreq = freq;
+        activeFrequencies.forEach(freqKey => {
+          const freq = allFreqs[freqKey];
+          if (freq) {
+            const harmonicDiff = Math.abs(memory.harmonic - freq.freq);
+            const influence = Math.max(0, 1 - harmonicDiff / 300);
+            if (influence > maxInfluence) {
+              maxInfluence = influence;
+              influencingFreqKey = freqKey;
+            }
           }
         });
         
-        if (maxInfluence > 0.2) {
-          // Apply harmonic attraction and color shift
-          const targetFreq = SOLFEGGIO_FREQUENCIES.find(f => f.freq === influencingFreq);
+        if (maxInfluence > 0.2 && influencingFreqKey) {
+          const targetFreq = allFreqs[influencingFreqKey];
           if (targetFreq) {
             return {
               ...memory,
-              harmonic: memory.harmonic + (influencingFreq - memory.harmonic) * 0.1 * maxInfluence,
+              harmonic: memory.harmonic + (targetFreq.freq - memory.harmonic) * 0.1 * maxInfluence,
               color: targetFreq.color,
               intensity: Math.min(1, memory.intensity + maxInfluence * 0.2),
             };
@@ -188,7 +203,7 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
     if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
-  }, [visible, activeFrequencies, setMemories]);
+  }, [visible, activeFrequencies, setMemories, getAllFrequencies]);
   
   // Master play/pause
   const togglePlayback = useCallback(() => {
@@ -202,43 +217,45 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-  }, [visible, isPlaying, activeFrequencies.size, applyHarmonicInfluence]);
+  }, [visible, isPlaying, activeFrequencies.size, applyHarmonicInfluence, setIsPlaying]);
   
   // Clear all frequencies
   const clearAll = useCallback(() => {
     if (!visible) return;
     
-    activeFrequencies.forEach(freq => {
-      Animated.timing(frequencyAnims[freq], {
+    activeFrequencies.forEach(freqKey => {
+      Animated.timing(frequencyAnims[freqKey], {
         toValue: 0,
         duration: 200,
         useNativeDriver: true,
       }).start();
     });
-    setActiveFrequencies(new Set());
-    setIsPlaying(false);
-  }, [visible, activeFrequencies, frequencyAnims]);
+    stopAll();
+  }, [visible, activeFrequencies, frequencyAnims, stopAll]);
   
   // Activate sacred sequence (3-6-9 Tesla pattern)
   const activateSacredSequence = useCallback(() => {
     if (!visible) return;
     
-    const sacredFreqs = [396, 639, 963]; // 3-6-9 pattern
-    clearAll();
+    const sacredSequence = ['UT', 'FA', 'SI']; // 396, 639, 963 Hz - 3-6-9 pattern
+    playSacredSequence(sacredSequence);
+    setHarmonicMode('collective');
     
-    setTimeout(() => {
-      sacredFreqs.forEach((freq, index) => {
-        setTimeout(() => {
-          toggleFrequency(freq);
-        }, index * 200);
-      });
-      
+    // Animate the sequence
+    sacredSequence.forEach((freqKey, index) => {
       setTimeout(() => {
-        setIsPlaying(true);
-        setHarmonicMode('collective');
-      }, 800);
-    }, 300);
-  }, [visible, clearAll, toggleFrequency, setHarmonicMode]);
+        Animated.timing(frequencyAnims[freqKey], {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      }, index * 300);
+    });
+    
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  }, [visible, playSacredSequence, setHarmonicMode, frequencyAnims]);
   
   if (!visible) return null;
   
@@ -340,17 +357,17 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
           
           {/* Frequency Grid */}
           <View style={styles.frequencyGrid}>
-            {SOLFEGGIO_FREQUENCIES.map((freq, index) => {
-              const isActive = activeFrequencies.has(freq.freq);
+            {solfeggioFreqs.map((freq, index) => {
+              const isActive = activeFrequencies.has(freq.key);
               
               return (
                 <TouchableOpacity
-                  key={freq.freq}
+                  key={freq.key}
                   style={[
                     styles.frequencyButton,
                     isActive && styles.frequencyButtonActive,
                   ]}
-                  onPress={() => toggleFrequency(freq.freq)}
+                  onPress={() => handleToggleFrequency(freq.key)}
                 >
                   <Animated.View
                     style={[
@@ -358,16 +375,16 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
                       {
                         transform: [
                           {
-                            scale: frequencyAnims[freq.freq].interpolate({
+                            scale: frequencyAnims[freq.key]?.interpolate({
                               inputRange: [0, 1],
                               outputRange: [1, 1.1],
-                            }),
+                            }) || 1,
                           },
                         ],
-                        opacity: frequencyAnims[freq.freq].interpolate({
+                        opacity: frequencyAnims[freq.key]?.interpolate({
                           inputRange: [0, 1],
                           outputRange: [0.6, 1],
-                        }),
+                        }) || 0.6,
                       },
                     ]}
                   >
@@ -423,7 +440,8 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
             <Text style={styles.statusText}>
               Active: {activeFrequencies.size} frequencies • 
               Mode: {harmonicMode} • 
-              Coherence: {(globalCoherence * 100).toFixed(0)}%
+              Coherence: {(globalCoherence * 100).toFixed(0)}% • 
+              Ψ-Bloom: {(quantumCoherence.psi_bloom * 100).toFixed(0)}%
             </Text>
           </View>
         </View>

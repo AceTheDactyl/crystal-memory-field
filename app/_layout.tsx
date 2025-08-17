@@ -4,6 +4,7 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { MemoryFieldProvider } from "@/providers/MemoryFieldProvider";
+import { SolfeggioProvider } from "@/providers/SolfeggioProvider";
 import { trpc, trpcClient } from "@/lib/trpc";
 
 SplashScreen.preventAutoHideAsync();
@@ -27,11 +28,13 @@ export default function RootLayout() {
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
-        <MemoryFieldProvider>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <RootLayoutNav />
-          </GestureHandlerRootView>
-        </MemoryFieldProvider>
+        <SolfeggioProvider>
+          <MemoryFieldProvider>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <RootLayoutNav />
+            </GestureHandlerRootView>
+          </MemoryFieldProvider>
+        </SolfeggioProvider>
       </QueryClientProvider>
     </trpc.Provider>
   );
