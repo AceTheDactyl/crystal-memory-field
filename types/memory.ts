@@ -16,6 +16,9 @@ export interface Memory {
   harmonic: number;
   coherenceLevel: number;
   crystallizationTime: number | null;
+  // Cosmic properties
+  cosmicType?: string;
+  stellarMagnitude?: number;
 }
 
 export interface Pulse {
