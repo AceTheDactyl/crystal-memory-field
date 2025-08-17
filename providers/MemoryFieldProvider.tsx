@@ -30,6 +30,7 @@ interface MemoryFieldContextType {
   handleObservation: (memoryId: number) => void;
   releaseAll: () => void;
   createPulse: (x: number, y: number) => void;
+  addMemory: (memoryData: Partial<Memory>) => void;
 }
 
 // Create the context hook with a stable function
@@ -493,6 +494,32 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
     );
   }, []);
 
+  const addMemory = useCallback((memoryData: Partial<Memory>) => {
+    const newMemory: Memory = {
+      id: Date.now() + Math.random(),
+      x: memoryData.x || Math.random() * 100,
+      y: memoryData.y || Math.random() * 100,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      crystallized: memoryData.crystallized || false,
+      intensity: memoryData.intensity || Math.random() * 0.5 + 0.5,
+      frequency: Math.random() * 0.02 + 0.01,
+      phase: Math.random() * Math.PI * 2,
+      connections: [],
+      color: memoryData.color || `hsl(${200 + ((memoryData.harmonic || 432) % 360)}, 70%, 60%)`,
+      size: Math.random() * 15 + 10,
+      content: memoryData.content || 'Bloom',
+      archetype: memoryData.archetype || 'consciousness',
+      harmonic: memoryData.harmonic || 528,
+      coherenceLevel: 0,
+      crystallizationTime: null,
+      ...memoryData,
+    };
+    
+    setMemories(prev => [...prev, newMemory]);
+    console.log('🌸 New memory bloomed:', newMemory.content, newMemory.harmonic + 'Hz');
+  }, []);
+
   // Return stable object reference to prevent unnecessary re-renders
   return {
     memories,
@@ -522,6 +549,7 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
     handleObservation,
     releaseAll,
     createPulse,
+    addMemory,
   };
 }
 

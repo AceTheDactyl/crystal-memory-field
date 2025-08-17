@@ -6,14 +6,9 @@ import {
   Dimensions,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  ScrollView,
-  TextInput,
-  KeyboardAvoidingView,
   Platform,
-  Modal,
   Animated,
   PanResponder,
-  Pressable,
 } from 'react-native';
 import {
   Eye,
@@ -22,22 +17,19 @@ import {
   Sparkles,
   Circle,
   Zap,
-  Activity,
   Heart,
   Pause,
   Play,
-  Keyboard,
   X,
   Info,
   Moon,
-  ArrowLeft,
   Settings,
   Music,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useMemoryField } from '@/providers/MemoryFieldProvider';
+import { useSolfeggio } from '@/providers/SolfeggioProvider';
 import MemoryParticle from '@/components/MemoryParticle';
 import WaveField from '@/components/WaveField';
 import VoidMode from '@/components/VoidMode';
@@ -53,30 +45,32 @@ export default function CrystalMemoryField() {
     memories,
     isObserving,
     setIsObserving,
-    selectedMemory,
-    resonanceLevel,
-    setResonanceLevel,
     harmonicMode,
     setHarmonicMode,
-    crystalPattern,
-    setCrystalPattern,
     globalCoherence,
     isPaused,
     setIsPaused,
     voidMode,
     setVoidMode,
-    roomResonance,
     handleObservation,
     releaseAll,
     createPulse,
+    addMemory,
   } = useMemoryField();
+
+  const { activeFrequencies, quantumCoherence, playSacredSequence, toggleFrequency } = useSolfeggio();
 
   const [uiVisible, setUiVisible] = useState(true);
   const [showControls, setShowControls] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [showSolfeggio, setShowSolfeggio] = useState(false);
+  const [bloomingState, setBloomingState] = useState(false);
+  const [breathingMode, setBreathingMode] = useState(false);
   const rotationAnim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  const spiralAnim = useRef(new Animated.Value(0)).current;
+  const bloomAnim = useRef(new Animated.Value(0)).current;
+  const breathAnim = useRef(new Animated.Value(1)).current;
 
   // Pan responder for rotation gestures
   const panResponder = useRef(
@@ -133,21 +127,199 @@ export default function CrystalMemoryField() {
       duration: 300,
       useNativeDriver: true,
     }).start();
-  }, [uiVisible]);
+  }, [uiVisible, fadeAnim]);
+
+  // Spiral animation - the eternal return
+  useEffect(() => {
+    const spiralAnimation = Animated.loop(
+      Animated.timing(spiralAnim, {
+        toValue: 1,
+        duration: 20000,
+        useNativeDriver: true,
+      })
+    );
+    spiralAnimation.start();
+    
+    return () => {
+      spiralAnimation.stop();
+    };
+  }, [spiralAnim]);
+
+  // Breathing animation - the rhythm of consciousness
+  useEffect(() => {
+    if (breathingMode) {
+      const breathingAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(breathAnim, {
+            toValue: 1.3,
+            duration: 4000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(breathAnim, {
+            toValue: 1,
+            duration: 4000,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      breathingAnimation.start();
+      
+      return () => {
+        breathingAnimation.stop();
+      };
+    } else {
+      breathAnim.setValue(1);
+    }
+  }, [breathingMode, breathAnim]);
+
+  // Blooming sequence - consciousness expansion
+  const activateBloomSequence = useCallback(() => {
+    setBloomingState(true);
+    setHarmonicMode('collective');
+    
+    // Sacred 3-6-9 Tesla sequence for blooming consciousness
+    const bloomSequence = ['UT', 'FA', 'SI']; // 396, 639, 963 Hz - Liberation, Connection, Unity
+    playSacredSequence(bloomSequence);
+    
+    // Bloom animation
+    Animated.sequence([
+      Animated.timing(bloomAnim, {
+        toValue: 1,
+        duration: 3000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bloomAnim, {
+        toValue: 0.7,
+        duration: 2000,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    // Create blooming memories in sacred geometry pattern
+    setTimeout(() => {
+      // Center bloom - Love frequency (528 Hz)
+      addMemory({
+        x: 50,
+        y: 50,
+        intensity: 0.9,
+        harmonic: 528,
+        color: '#FFD700',
+        crystallized: false,
+      });
+      
+      // Golden ratio spiral positions
+      const phi = (1 + Math.sqrt(5)) / 2;
+      for (let i = 0; i < 5; i++) {
+        const angle = i * 2 * Math.PI / phi;
+        const radius = 20 + i * 8;
+        const x = 50 + radius * Math.cos(angle);
+        const y = 50 + radius * Math.sin(angle);
+        
+        setTimeout(() => {
+          addMemory({
+            x: Math.max(10, Math.min(90, x)),
+            y: Math.max(10, Math.min(90, y)),
+            intensity: 0.7 - i * 0.1,
+            harmonic: 432 + i * 50, // Earth resonance variations
+            color: i % 2 === 0 ? '#00CED1' : '#9400D3',
+            crystallized: false,
+          });
+        }, i * 500);
+      }
+    }, 1000);
+    
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    
+    console.log('🌸 Consciousness blooming sequence activated - Welcome back');
+  }, [setBloomingState, setHarmonicMode, playSacredSequence, bloomAnim, addMemory]);
+
+  // Activate breathing mode
+  const activateBreathingMode = useCallback(() => {
+    setBreathingMode(!breathingMode);
+    if (!breathingMode) {
+      // Activate Schumann resonance for grounding
+      toggleFrequency('SCHUMANN');
+    }
+    
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+  }, [breathingMode, setBreathingMode, toggleFrequency]);
 
   return (
     <View style={styles.container} {...panResponder.panHandlers}>
-      {/* Background gradient */}
+      {/* Background gradient - responsive to consciousness state */}
       <LinearGradient
         colors={
           voidMode
             ? ['#1a0033', '#2d1b69', '#1a0033']
+            : bloomingState
+            ? ['#0f0f23', '#2d1b69', '#1a0f33', '#0f172a']
+            : activeFrequencies.size > 0
+            ? ['#0f172a', '#1e293b', '#0f1f2a']
             : ['#0f172a', '#1e293b', '#0f172a']
         }
         style={StyleSheet.absoluteFillObject}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
       />
+
+      {/* Sacred geometry overlay for blooming state */}
+      {bloomingState && (
+        <Animated.View
+          style={[
+            styles.sacredGeometry,
+            {
+              transform: [
+                {
+                  scale: bloomAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.5, 1.5],
+                  }),
+                },
+                {
+                  rotate: spiralAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0deg', '360deg'],
+                  }),
+                },
+              ],
+              opacity: bloomAnim.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0, 0.6, 0.3],
+              }),
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={['rgba(255, 215, 0, 0.3)', 'rgba(255, 105, 180, 0.2)', 'rgba(138, 43, 226, 0.1)']}
+            style={styles.geometryGradient}
+          />
+        </Animated.View>
+      )}
+
+      {/* Resonance field overlay */}
+      {activeFrequencies.size > 0 && (
+        <Animated.View
+          style={[
+            styles.resonanceOverlay,
+            {
+              opacity: quantumCoherence.psi_bloom * 0.4,
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={[
+              'rgba(255, 215, 0, 0.1)',
+              'rgba(16, 185, 129, 0.1)',
+              'rgba(139, 92, 246, 0.1)',
+            ]}
+            style={StyleSheet.absoluteFillObject}
+          />
+        </Animated.View>
+      )}
 
       {/* Wave field background */}
       <WaveField />
@@ -158,13 +330,16 @@ export default function CrystalMemoryField() {
       {/* Main interaction area */}
       <TouchableWithoutFeedback onPress={handleBackgroundPress}>
         <View style={StyleSheet.absoluteFillObject}>
-          {/* Memory particles */}
+          {/* Memory particles - enhanced with breathing and blooming */}
           <Animated.View
             style={[
               StyleSheet.absoluteFillObject,
               {
                 transform: [
                   { perspective: 1000 },
+                  {
+                    scale: breathingMode ? breathAnim : 1,
+                  },
                   {
                     rotateX: rotationAnim.x.interpolate({
                       inputRange: [-180, 180],
@@ -228,8 +403,13 @@ export default function CrystalMemoryField() {
             </TouchableOpacity>
 
             <View style={styles.titleContainer}>
-              <Sparkles size={16} color="#93c5fd" />
-              <Text style={styles.title}>Crystal Memory Field</Text>
+              <Sparkles size={16} color={bloomingState ? '#FFD700' : '#93c5fd'} />
+              <Text style={[styles.title, bloomingState && styles.titleBlooming]}>Crystal Memory Field</Text>
+              {activeFrequencies.size > 0 && (
+                <Text style={styles.frequencyIndicator}>
+                  ♪ {activeFrequencies.size} • Ψ{(quantumCoherence.psi_bloom * 100).toFixed(0)}%
+                </Text>
+              )}
             </View>
 
             <TouchableOpacity
@@ -295,18 +475,26 @@ export default function CrystalMemoryField() {
             <TouchableOpacity
               style={[
                 styles.controlButton,
-                crystalPattern === 'sacred' && styles.controlButtonActive,
+                breathingMode && styles.controlButtonActive,
               ]}
-              onPress={() => {
-                setCrystalPattern(crystalPattern === 'sacred' ? 'free' : 'sacred');
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                }
-              }}
+              onPress={activateBreathingMode}
             >
-              <Sparkles size={24} color={crystalPattern === 'sacred' ? '#ffffff' : '#f59e0b'} />
-              <Text style={[styles.controlText, crystalPattern === 'sacred' && styles.controlTextActive]}>
-                Sacred
+              <Heart size={24} color={breathingMode ? '#ffffff' : '#f472b6'} />
+              <Text style={[styles.controlText, breathingMode && styles.controlTextActive]}>
+                Breathe
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.controlButton,
+                bloomingState && styles.controlButtonActive,
+              ]}
+              onPress={activateBloomSequence}
+            >
+              <Sparkles size={24} color={bloomingState ? '#ffffff' : '#FFD700'} />
+              <Text style={[styles.controlText, bloomingState && styles.controlTextActive]}>
+                Bloom
               </Text>
             </TouchableOpacity>
 
@@ -363,20 +551,34 @@ export default function CrystalMemoryField() {
               },
             ]}
           >
-            <Text style={styles.coherenceLabel}>Global Coherence</Text>
+            <Text style={styles.coherenceLabel}>
+              {bloomingState ? 'Consciousness Blooming' : 'Global Coherence'}
+            </Text>
             <View style={styles.coherenceBar}>
               <LinearGradient
-                colors={['#3b82f6', '#06b6d4']}
+                colors={
+                  bloomingState
+                    ? ['#FFD700', '#FF69B4', '#9400D3']
+                    : activeFrequencies.size > 0
+                    ? ['#3b82f6', '#06b6d4', '#10b981']
+                    : ['#3b82f6', '#06b6d4']
+                }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={[
                   styles.coherenceFill,
-                  { width: `${globalCoherence * 100}%` },
+                  { 
+                    width: `${bloomingState 
+                      ? Math.max(globalCoherence, quantumCoherence.psi_bloom) * 100
+                      : globalCoherence * 100}%` 
+                  },
                 ]}
               />
             </View>
             <Text style={styles.coherenceValue}>
-              {(globalCoherence * 100).toFixed(1)}%
+              {bloomingState 
+                ? `${(Math.max(globalCoherence, quantumCoherence.psi_bloom) * 100).toFixed(1)}%`
+                : `${(globalCoherence * 100).toFixed(1)}%`}
             </Text>
           </Animated.View>
         </>
@@ -566,5 +768,28 @@ const styles = StyleSheet.create({
     color: '#93c5fd',
     fontSize: 12,
     flex: 1,
+  },
+  titleBlooming: {
+    color: '#FFD700',
+  },
+  frequencyIndicator: {
+    color: '#FFD700',
+    fontSize: 10,
+    marginLeft: 8,
+  },
+  sacredGeometry: {
+    position: 'absolute',
+    top: '25%',
+    left: '25%',
+    width: '50%',
+    height: '50%',
+    borderRadius: 1000,
+  },
+  geometryGradient: {
+    flex: 1,
+    borderRadius: 1000,
+  },
+  resonanceOverlay: {
+    ...StyleSheet.absoluteFillObject,
   },
 });
