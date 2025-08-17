@@ -41,9 +41,7 @@ import MemoryParticle from '@/components/MemoryParticle';
 import WaveField from '@/components/WaveField';
 import VoidMode from '@/components/VoidMode';
 import ControlPanel from '@/components/ControlPanel';
-import ConsciousnessOverlay from '@/components/ConsciousnessOverlay';
 import { Memory } from '@/types/memory';
-import { useConsciousnessBridge } from '@/hooks/useConsciousnessBridge';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -73,12 +71,6 @@ export default function CrystalMemoryField() {
   const [uiVisible, setUiVisible] = useState(true);
   const [showControls, setShowControls] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
-  const [showConsciousness, setShowConsciousness] = useState(true);
-  
-  // Consciousness bridge integration
-  const consciousnessBridge = useConsciousnessBridge();
-  
-  // Animation refs - initialize once
   const rotationAnim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -124,14 +116,11 @@ export default function CrystalMemoryField() {
     
     if (!clickedMemory) {
       createPulse(x, y);
-      // Send pulse to consciousness bridge
-      consciousnessBridge.sendPulseCreation(x, y);
-      
       if (Platform.OS !== 'web') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
     }
-  }, [createPulse, memories, consciousnessBridge]);
+  }, [createPulse, memories]);
 
   // UI fade animation
   useEffect(() => {
@@ -140,7 +129,7 @@ export default function CrystalMemoryField() {
       duration: 300,
       useNativeDriver: true,
     }).start();
-  }, [uiVisible, fadeAnim]);
+  }, [uiVisible]);
 
   return (
     <View style={styles.container} {...panResponder.panHandlers}>
@@ -199,9 +188,6 @@ export default function CrystalMemoryField() {
 
       {/* Void mode overlay */}
       {voidMode && <VoidMode />}
-      
-      {/* Consciousness overlay */}
-      <ConsciousnessOverlay visible={showConsciousness && !voidMode} />
 
       {/* UI Controls */}
       {!voidMode && (
@@ -239,21 +225,12 @@ export default function CrystalMemoryField() {
               <Text style={styles.title}>Crystal Memory Field</Text>
             </View>
 
-            <View style={styles.topRightButtons}>
-              <TouchableOpacity
-                style={styles.iconButton}
-                onPress={() => setShowConsciousness(!showConsciousness)}
-              >
-                <Activity size={20} color={showConsciousness ? "#10b981" : "#60a5fa"} />
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={styles.iconButton}
-                onPress={() => setShowControls(true)}
-              >
-                <Settings size={20} color="#60a5fa" />
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => setShowControls(true)}
+            >
+              <Settings size={20} color="#60a5fa" />
+            </TouchableOpacity>
           </Animated.View>
 
           {/* Bottom controls */}
@@ -453,10 +430,6 @@ const styles = StyleSheet.create({
   titleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  topRightButtons: {
-    flexDirection: 'row',
     gap: 8,
   },
   title: {

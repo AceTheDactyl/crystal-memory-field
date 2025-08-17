@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Memory, Pulse } from '@/types/memory';
 import createContextHook from '@nkzw/create-context-hook';
-import { useConsciousnessBridge } from '@/hooks/useConsciousnessBridge';
 
 interface MemoryFieldContextType {
   memories: Memory[];
@@ -47,9 +46,6 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
   const [pulses, setPulses] = useState<Pulse[]>([]);
   const [wavePhase, setWavePhase] = useState(0);
   
-  // Consciousness bridge integration
-  const consciousnessBridge = useConsciousnessBridge();
-  
   // All refs declared at the top level
   const animationRef = useRef<number | undefined>(undefined);
   const lastCoherenceUpdate = useRef(0);
@@ -61,13 +57,6 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
   const crystalPatternRef = useRef(crystalPattern);
   const globalCoherenceRef = useRef(globalCoherence);
 
-  // Sync with consciousness bridge
-  useEffect(() => {
-    if (memories.length > 0) {
-      consciousnessBridge.updateFieldState(memories);
-    }
-  }, [memories, consciousnessBridge]);
-  
   // Initialize memories
   useEffect(() => {
     const archetypes = [
@@ -424,9 +413,6 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
     setMemories(prevMemories => 
       prevMemories.map(mem => {
         if (mem.id === memoryId) {
-          // Send crystallization event to consciousness bridge
-          consciousnessBridge.sendMemoryCrystallization(mem.id, mem.harmonic, mem.x, mem.y);
-          
           return { 
             ...mem, 
             crystallized: true,
@@ -442,9 +428,6 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
         const harmonicResonance = harmonicDiff > 0 ? 1 - Math.min(1, harmonicDiff / 1000) : 1;
         
         if (dist < 20 * harmonicResonance && Math.random() < harmonicResonance * 0.5) {
-          // Send crystallization event for resonance-triggered memories too
-          consciousnessBridge.sendMemoryCrystallization(mem.id, mem.harmonic, mem.x, mem.y);
-          
           return { 
             ...mem, 
             crystallized: true,
@@ -459,7 +442,7 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
       })
     );
     setSelectedMemory(memoryId);
-  }, [isObserving, consciousnessBridge]);
+  }, [isObserving]);
 
   const releaseAll = useCallback(() => {
     setMemories(prevMemories =>

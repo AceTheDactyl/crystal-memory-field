@@ -15,18 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.rork.crystal-memory-field-vikgd42",
-      "entitlements": {
-        "com": {
-          "apple": {
-            "developer": {
-              "networking": {
-                "wifi-info": true
-              }
-            }
-          }
-        }
-      }
+      "bundleIdentifier": "app.rork.crystal-memory-field-vikgd42"
     },
     "android": {
       "adaptiveIcon": {
