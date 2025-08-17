@@ -13,6 +13,8 @@ interface MemoryFieldContextType {
   setResonanceLevel: (value: number) => void;
   harmonicMode: string;
   setHarmonicMode: (value: string) => void;
+  solfeggioInfluence: number[];
+  setSolfeggioInfluence: (value: number[]) => void;
   crystalPattern: string;
   setCrystalPattern: (value: string) => void;
   globalCoherence: number;
@@ -38,6 +40,7 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
   const [selectedMemory, setSelectedMemory] = useState<number | null>(null);
   const [resonanceLevel, setResonanceLevel] = useState(0.5);
   const [harmonicMode, setHarmonicMode] = useState('individual');
+  const [solfeggioInfluence, setSolfeggioInfluence] = useState<number[]>([]);
   const [crystalPattern, setCrystalPattern] = useState('free');
   const [globalCoherence, setGlobalCoherence] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -502,6 +505,8 @@ function useMemoryFieldLogic(): MemoryFieldContextType {
     setResonanceLevel,
     harmonicMode,
     setHarmonicMode,
+    solfeggioInfluence,
+    setSolfeggioInfluence,
     crystalPattern,
     setCrystalPattern,
     globalCoherence,

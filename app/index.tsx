@@ -32,6 +32,7 @@ import {
   Moon,
   ArrowLeft,
   Settings,
+  Music,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -41,6 +42,8 @@ import MemoryParticle from '@/components/MemoryParticle';
 import WaveField from '@/components/WaveField';
 import VoidMode from '@/components/VoidMode';
 import ControlPanel from '@/components/ControlPanel';
+import SolfeggioHarmonics from '@/components/SolfeggioHarmonics';
+import HarmonicVisualization from '@/components/HarmonicVisualization';
 import { Memory } from '@/types/memory';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -71,6 +74,7 @@ export default function CrystalMemoryField() {
   const [uiVisible, setUiVisible] = useState(true);
   const [showControls, setShowControls] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [showSolfeggio, setShowSolfeggio] = useState(false);
   const rotationAnim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
@@ -147,6 +151,9 @@ export default function CrystalMemoryField() {
 
       {/* Wave field background */}
       <WaveField />
+      
+      {/* Harmonic visualization */}
+      {harmonicMode === 'collective' && <HarmonicVisualization />}
 
       {/* Main interaction area */}
       <TouchableWithoutFeedback onPress={handleBackgroundPress}>
@@ -306,6 +313,19 @@ export default function CrystalMemoryField() {
             <TouchableOpacity
               style={styles.controlButton}
               onPress={() => {
+                setShowSolfeggio(true);
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                }
+              }}
+            >
+              <Music size={24} color="#f59e0b" />
+              <Text style={styles.controlText}>Solfeggio</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.controlButton}
+              onPress={() => {
                 setVoidMode(true);
                 if (Platform.OS !== 'web') {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -366,6 +386,12 @@ export default function CrystalMemoryField() {
       <ControlPanel
         visible={showControls}
         onClose={() => setShowControls(false)}
+      />
+
+      {/* Solfeggio Harmonics Modal */}
+      <SolfeggioHarmonics
+        visible={showSolfeggio}
+        onClose={() => setShowSolfeggio(false)}
       />
 
       {/* Info button */}
