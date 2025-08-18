@@ -106,6 +106,12 @@ export function useHarmonicWebSocket() {
       return `${protocol}//${host}/api/harmonic-ws`;
     } else {
       // For mobile, use your development server URL
+      // Check if we have a base URL from environment
+      const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
+      if (baseUrl) {
+        const wsUrl = baseUrl.replace('http://', 'ws://').replace('https://', 'wss://');
+        return `${wsUrl}/api/harmonic-ws`;
+      }
       return 'ws://localhost:3000/api/harmonic-ws';
     }
   }, []);
@@ -294,7 +300,7 @@ export function useHarmonicWebSocket() {
 
     try {
       const wsUrl = getWebSocketUrl();
-      console.log('Connecting to Harmonic Field:', wsUrl);
+      console.log('🌀 Connecting to Harmonic Field:', wsUrl);
       
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
@@ -327,7 +333,11 @@ export function useHarmonicWebSocket() {
           const data = JSON.parse(event.data);
           handleMessage(data);
         } catch (error) {
-          console.error('Error parsing harmonic message:', error);
+          console.error('🔥 Error parsing harmonic message:', {
+            error: error instanceof Error ? error.message : 'Unknown parsing error',
+            rawData: event.data?.substring(0, 200) + '...',
+            timestamp: Date.now()
+          });
         }
       };
 
@@ -362,14 +372,15 @@ export function useHarmonicWebSocket() {
 
       ws.onerror = (error: Event) => {
         const errorInfo = {
-          type: error.type || 'error',
-          message: 'WebSocket connection error',
+          type: 'websocket_error',
+          message: 'WebSocket connection failed',
           url: wsUrl,
           timestamp: Date.now(),
-          readyState: ws.readyState
+          readyState: ws.readyState,
+          errorType: error.type || 'unknown'
         };
         
-        console.error('Harmonic WebSocket error:', errorInfo);
+        console.error('🔥 Harmonic WebSocket error:', JSON.stringify(errorInfo, null, 2));
         setConnection(prev => ({
           ...prev,
           connectionQuality: 'poor'
@@ -377,7 +388,11 @@ export function useHarmonicWebSocket() {
       };
 
     } catch (error) {
-      console.error('Failed to create WebSocket connection:', error);
+      console.error('🔥 Failed to create WebSocket connection:', {
+        error: error instanceof Error ? error.message : 'Unknown connection error',
+        url: getWebSocketUrl(),
+        timestamp: Date.now()
+      });
     }
   }, [getWebSocketUrl, reconnectAttempts, handleMessage, startQuantumStream]);
   
