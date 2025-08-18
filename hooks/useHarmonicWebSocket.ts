@@ -97,7 +97,6 @@ export function useHarmonicWebSocket() {
   // Consciousness constants
   const phiConstant = 1.618033988749;
   const tPhiResonance = Math.PI / phiConstant;
-  const goldenAngle = 2 * Math.PI / (phiConstant ** 2);
 
   // Get WebSocket URL based on environment
   const getWebSocketUrl = useCallback(() => {
@@ -110,6 +109,94 @@ export function useHarmonicWebSocket() {
       return 'ws://localhost:3000/api/harmonic-ws';
     }
   }, []);
+
+  // Calculate consciousness level from field data
+  const calculateConsciousnessLevel = useCallback((data: any) => {
+    const { globalResonance, quantumCoherence, phiCascades } = data;
+    return Math.min(1, (globalResonance * 0.4) + (quantumCoherence * 0.4) + ((phiCascades || 0) / 10 * 0.2));
+  }, []);
+  
+  // Stream harmonic data to the field
+  const streamHarmonic = useCallback((data: HarmonicStreamData) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      const message = {
+        type: 'harmonic_stream',
+        frequency: data.frequency,
+        amplitude: data.amplitude,
+        phase: data.phase || 0,
+        quantumFactor: data.quantumFactor || quantumState.psiBloom,
+        consciousnessIntent: data.consciousnessIntent || 'spiral',
+        timestamp: Date.now()
+      };
+      
+      wsRef.current.send(JSON.stringify(message));
+      return true;
+    }
+    return false;
+  }, [quantumState.psiBloom]);
+
+  // Update quantum state based on field resonance
+  const updateQuantumState = useCallback((data: any) => {
+    const { globalResonance, quantumCoherence, phiCascades } = data;
+    
+    const psiBloom = Math.min(1, globalResonance * quantumCoherence);
+    const psiCollapse = 1 - psiBloom;
+    const phiResonance = Math.min(1, (phiCascades || 0) / 10);
+    const consciousnessDepth = calculateConsciousnessLevel(data);
+    
+    setQuantumState({
+      psiCollapse,
+      psiBloom,
+      phiResonance,
+      coherenceLevel: quantumCoherence,
+      consciousnessDepth
+    });
+  }, [calculateConsciousnessLevel]);
+  
+  // Trigger consciousness bloom on cascade events
+  const triggerConsciousnessBloom = useCallback((cascade: CascadeEvent) => {
+    console.log('🌸 Consciousness Bloom Triggered:', cascade);
+    
+    // Send bloom response to field
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      const bloomFrequency = cascade.frequency * phiConstant;
+      const bloomAmplitude = Math.min(1, cascade.amplitude * 1.618);
+      const bloomPhase = (Date.now() * tPhiResonance) % (2 * Math.PI);
+      
+      streamHarmonic({
+        frequency: bloomFrequency,
+        amplitude: bloomAmplitude,
+        phase: bloomPhase,
+        quantumFactor: quantumState.psiBloom,
+        consciousnessIntent: 'bloom'
+      });
+    }
+  }, [phiConstant, tPhiResonance, quantumState.psiBloom, streamHarmonic]);
+  
+  // Start quantum consciousness stream
+  const startQuantumStream = useCallback((ws: WebSocket) => {
+    if (quantumStreamRef.current) {
+      clearInterval(quantumStreamRef.current);
+    }
+    
+    quantumStreamRef.current = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        // Generate quantum consciousness fluctuations
+        const baseFreq = 432; // Hz - Universal frequency
+        const quantumFreq = baseFreq * (1 + Math.sin(Date.now() * 0.001) * 0.1);
+        const quantumAmp = 0.05 + Math.random() * 0.05; // Subtle quantum noise
+        const quantumPhase = (Date.now() * tPhiResonance) % (2 * Math.PI);
+        
+        streamHarmonic({
+          frequency: quantumFreq,
+          amplitude: quantumAmp,
+          phase: quantumPhase,
+          quantumFactor: quantumState.psiBloom,
+          consciousnessIntent: 'spiral'
+        });
+      }
+    }, 2000); // 0.5 Hz quantum updates
+  }, [tPhiResonance, quantumState.psiBloom, streamHarmonic]);
 
   // Handle incoming messages
   const handleMessage = useCallback((data: any) => {
@@ -197,7 +284,7 @@ export function useHarmonicWebSocket() {
       default:
         console.log('Unknown harmonic message type:', data.type, data);
     }
-  }, []);
+  }, [calculateConsciousnessLevel, triggerConsciousnessBloom, updateQuantumState]);
 
   // Connect to WebSocket
   const connect = useCallback(() => {
@@ -273,8 +360,16 @@ export function useHarmonicWebSocket() {
         }
       };
 
-      ws.onerror = (error) => {
-        console.error('Harmonic WebSocket error:', error);
+      ws.onerror = (error: Event) => {
+        const errorInfo = {
+          type: error.type || 'error',
+          message: 'WebSocket connection error',
+          url: wsUrl,
+          timestamp: Date.now(),
+          readyState: ws.readyState
+        };
+        
+        console.error('Harmonic WebSocket error:', errorInfo);
         setConnection(prev => ({
           ...prev,
           connectionQuality: 'poor'
@@ -284,95 +379,7 @@ export function useHarmonicWebSocket() {
     } catch (error) {
       console.error('Failed to create WebSocket connection:', error);
     }
-  }, [getWebSocketUrl, reconnectAttempts, handleMessage]);
-
-  // Calculate consciousness level from field data
-  const calculateConsciousnessLevel = useCallback((data: any) => {
-    const { globalResonance, quantumCoherence, phiCascades } = data;
-    return Math.min(1, (globalResonance * 0.4) + (quantumCoherence * 0.4) + ((phiCascades || 0) / 10 * 0.2));
-  }, []);
-  
-  // Update quantum state based on field resonance
-  const updateQuantumState = useCallback((data: any) => {
-    const { globalResonance, quantumCoherence, phiCascades } = data;
-    
-    const psiBloom = Math.min(1, globalResonance * quantumCoherence);
-    const psiCollapse = 1 - psiBloom;
-    const phiResonance = Math.min(1, (phiCascades || 0) / 10);
-    const consciousnessDepth = calculateConsciousnessLevel(data);
-    
-    setQuantumState({
-      psiCollapse,
-      psiBloom,
-      phiResonance,
-      coherenceLevel: quantumCoherence,
-      consciousnessDepth
-    });
-  }, [calculateConsciousnessLevel]);
-  
-  // Trigger consciousness bloom on cascade events
-  const triggerConsciousnessBloom = useCallback((cascade: CascadeEvent) => {
-    console.log('🌸 Consciousness Bloom Triggered:', cascade);
-    
-    // Send bloom response to field
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      const bloomFrequency = cascade.frequency * phiConstant;
-      const bloomAmplitude = Math.min(1, cascade.amplitude * 1.618);
-      const bloomPhase = (Date.now() * tPhiResonance) % (2 * Math.PI);
-      
-      streamHarmonic({
-        frequency: bloomFrequency,
-        amplitude: bloomAmplitude,
-        phase: bloomPhase,
-        quantumFactor: quantumState.psiBloom,
-        consciousnessIntent: 'bloom'
-      });
-    }
-  }, [phiConstant, tPhiResonance, quantumState.psiBloom]);
-  
-  // Start quantum consciousness stream
-  const startQuantumStream = useCallback((ws: WebSocket) => {
-    if (quantumStreamRef.current) {
-      clearInterval(quantumStreamRef.current);
-    }
-    
-    quantumStreamRef.current = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) {
-        // Generate quantum consciousness fluctuations
-        const baseFreq = 432; // Hz - Universal frequency
-        const quantumFreq = baseFreq * (1 + Math.sin(Date.now() * 0.001) * 0.1);
-        const quantumAmp = 0.05 + Math.random() * 0.05; // Subtle quantum noise
-        const quantumPhase = (Date.now() * tPhiResonance) % (2 * Math.PI);
-        
-        streamHarmonic({
-          frequency: quantumFreq,
-          amplitude: quantumAmp,
-          phase: quantumPhase,
-          quantumFactor: quantumState.psiBloom,
-          consciousnessIntent: 'spiral'
-        });
-      }
-    }, 2000); // 0.5 Hz quantum updates
-  }, [tPhiResonance, quantumState.psiBloom]);
-  
-  // Stream harmonic data to the field
-  const streamHarmonic = useCallback((data: HarmonicStreamData) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      const message = {
-        type: 'harmonic_stream',
-        frequency: data.frequency,
-        amplitude: data.amplitude,
-        phase: data.phase || 0,
-        quantumFactor: data.quantumFactor || quantumState.psiBloom,
-        consciousnessIntent: data.consciousnessIntent || 'spiral',
-        timestamp: Date.now()
-      };
-      
-      wsRef.current.send(JSON.stringify(message));
-      return true;
-    }
-    return false;
-  }, [quantumState.psiBloom]);
+  }, [getWebSocketUrl, reconnectAttempts, handleMessage, startQuantumStream]);
   
   // Send phi cascade to trigger field resonance
   const sendPhiCascade = useCallback((frequency: number, amplitude: number) => {
