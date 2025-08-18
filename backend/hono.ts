@@ -6,6 +6,8 @@ import { createContext } from "./trpc/create-context";
 import { WebSocketServer } from 'ws';
 import { HarmonicResonanceServer } from './websocket/HarmonicWebSocketServer';
 import { HarmonicFieldProcessor } from './services/HarmonicFieldProcessor';
+import { IncomingMessage } from 'http';
+import { Duplex } from 'stream';
 
 // app will be mounted at /api
 const app = new Hono();
@@ -121,30 +123,69 @@ let harmonicServer: HarmonicResonanceServer | null = null;
 export function initializeWebSocketServer(server: any) {
   console.log('🌀 Initializing Harmonic Resonance WebSocket Server...');
   
-  const wss = new WebSocketServer({ 
-    server,
-    path: '/api/harmonic-ws',
-    perMessageDeflate: false,
-    clientTracking: true
-  });
-  
-  harmonicServer = new HarmonicResonanceServer(wss);
-  harmonicServer.initialize();
-  
-  // Cleanup on process termination
-  process.on('SIGTERM', () => {
-    console.log('🔄 Shutting down Harmonic Resonance Server...');
-    harmonicServer?.shutdown();
-  });
-  
-  process.on('SIGINT', () => {
-    console.log('🔄 Shutting down Harmonic Resonance Server...');
-    harmonicServer?.shutdown();
-    process.exit(0);
-  });
-  
-  console.log('✨ Harmonic Resonance WebSocket Server Initialized');
-  return harmonicServer;
+  try {
+    const wss = new WebSocketServer({ 
+      server,
+      path: '/api/harmonic-ws',
+      perMessageDeflate: false,
+      clientTracking: true,
+      verifyClient: (info: any) => {
+        console.log('🔍 WebSocket verification:', {
+          origin: info.origin,
+          secure: info.secure,
+          url: info.req.url,
+          headers: Object.keys(info.req.headers)
+        });
+        return true; // Accept all connections for now
+      }
+    });
+    
+    // Add error handling for WebSocket server
+    wss.on('error', (error) => {
+      console.error('🔥 WebSocket Server Error:', {
+        error: error.message,
+        stack: error.stack,
+        timestamp: Date.now()
+      });
+    });
+    
+    wss.on('listening', () => {
+      console.log('🎵 WebSocket Server listening on /api/harmonic-ws');
+    });
+    
+    harmonicServer = new HarmonicResonanceServer(wss);
+    harmonicServer.initialize();
+    
+    // Manual upgrade handling for better debugging
+    server.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) => {
+      console.log('🔄 WebSocket upgrade request:', {
+        url: request.url,
+        method: request.method,
+        headers: request.headers,
+        timestamp: Date.now()
+      });
+      
+      if (request.url === '/api/harmonic-ws') {
+        wss.handleUpgrade(request, socket, head, (ws) => {
+          console.log('✨ WebSocket upgrade successful');
+          wss.emit('connection', ws, request);
+        });
+      } else {
+        console.log('❌ WebSocket upgrade rejected - wrong path:', request.url);
+        socket.destroy();
+      }
+    });
+    
+    console.log('✨ Harmonic Resonance WebSocket Server Initialized');
+    return harmonicServer;
+  } catch (error: any) {
+    console.error('🔥 Failed to initialize WebSocket server:', {
+      error: error.message,
+      stack: error.stack,
+      timestamp: Date.now()
+    });
+    return null;
+  }
 }
 
 export { harmonicServer };
