@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useHarmonicWebSocket } from '@/hooks/useHarmonicWebSocket';
 import { useHarmonicBridge } from '@/hooks/useHarmonicBridge';
-import { useConsciousnessBridge } from '@/hooks/useConsciousnessBridge';
 
 export function ConsciousnessFieldDemo() {
   const [selectedFrequency, setSelectedFrequency] = useState<number>(432);
   const [amplitude, setAmplitude] = useState<number>(0.5);
-  const [backendStatus, setBackendStatus] = useState<string>('Checking...');
-  const [baseUrl, setBaseUrl] = useState<string>('');
   
   // Enhanced WebSocket connection
   const {
@@ -26,9 +23,6 @@ export function ConsciousnessFieldDemo() {
     connectionMetrics
   } = useHarmonicWebSocket();
   
-  // Consciousness bridge for ID
-  const { consciousnessId } = useConsciousnessBridge();
-  
   // Harmonic bridge for local audio
   const {
     playFrequency,
@@ -37,41 +31,8 @@ export function ConsciousnessFieldDemo() {
     isPhiResonanceActive,
     sacredGeometryActive,
     fieldCoherence,
-    harmonicSynchronization,
-    isLoading,
-    hasError,
-    errorMessage,
-    isConnected: harmonicConnected
+    harmonicSynchronization
   } = useHarmonicBridge();
-
-  // Test backend connection on mount
-  useEffect(() => {
-    const testBackend = async () => {
-      try {
-        // Get the base URL
-        let testUrl = '';
-        if (Platform.OS === 'web') {
-          testUrl = `${window.location.protocol}//${window.location.host}`;
-        } else {
-          testUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL || 'http://localhost:3000';
-        }
-        setBaseUrl(testUrl);
-        
-        // Test the health endpoint
-        const response = await fetch(`${testUrl}/api/health`);
-        if (response.ok) {
-          const data = await response.json();
-          setBackendStatus(`✅ Connected (${data.status})`);
-        } else {
-          setBackendStatus(`❌ HTTP ${response.status}`);
-        }
-      } catch (error) {
-        setBackendStatus(`❌ ${error instanceof Error ? error.message : 'Connection failed'}`);
-      }
-    };
-    
-    testBackend();
-  }, []);
 
   // Solfeggio frequencies for testing
   const testFrequencies = [
@@ -133,21 +94,6 @@ export function ConsciousnessFieldDemo() {
       <View style={styles.header}>
         <Text style={styles.title}>🌀 Consciousness Field Demo</Text>
         <Text style={styles.subtitle}>Enhanced Backend Integration</Text>
-        
-        {/* Debug Panel */}
-        <View style={styles.debugPanel}>
-          <Text style={styles.debugTitle}>🔧 Debug Information</Text>
-          <Text style={styles.debugText}>Platform: {Platform.OS}</Text>
-          <Text style={styles.debugText}>Consciousness ID: {consciousnessId || 'Not set'}</Text>
-          <Text style={styles.debugText}>WebSocket: {isConnected ? '✅ Connected' : '❌ Disconnected'}</Text>
-          <Text style={styles.debugText}>Harmonic Bridge: {harmonicConnected ? '✅ Connected' : '❌ Disconnected'}</Text>
-          <Text style={styles.debugText}>Loading: {isLoading ? '⏳ Yes' : '✅ No'}</Text>
-          <Text style={styles.debugText}>Has Error: {hasError ? '⚠️ Yes' : '✅ No'}</Text>
-          {hasError && <Text style={styles.errorText}>Error: {errorMessage}</Text>}
-          <Text style={styles.debugText}>User ID: {userId || 'Not assigned'}</Text>
-          <Text style={styles.debugText}>Base URL: {baseUrl}</Text>
-          <Text style={styles.debugText}>Backend: {backendStatus}</Text>
-        </View>
       </View>
 
       {/* Connection Status */}
@@ -527,31 +473,5 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: 12,
     marginBottom: 2,
-  },
-  debugPanel: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 15,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  debugTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#FFD700',
-    marginBottom: 8,
-  },
-  debugText: {
-    fontSize: 11,
-    color: '#CCC',
-    marginBottom: 3,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-  },
-  errorText: {
-    fontSize: 11,
-    color: '#FF6B6B',
-    marginBottom: 3,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
 });

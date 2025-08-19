@@ -96,12 +96,7 @@ export class HarmonicResonanceServer extends EventEmitter {
         const message: HarmonicMessage = JSON.parse(data.toString());
         this.handleMessage(session, message);
       } catch (error: any) {
-        console.error('🔥 Error parsing harmonic message:', {
-          error: error.message,
-          rawData: data.toString().substring(0, 200),
-          userId: session.userId,
-          timestamp: Date.now()
-        });
+        console.error('Error parsing harmonic message:', error);
       }
     });
 
@@ -111,11 +106,7 @@ export class HarmonicResonanceServer extends EventEmitter {
     });
 
     ws.on('error', (error) => {
-      console.error(`🔥 WebSocket error for ${userId}:`, {
-        error: error.message,
-        userId,
-        timestamp: Date.now()
-      });
+      console.error(`WebSocket error for ${userId}:`, error);
       this.handleDisconnection(userId);
     });
   }
@@ -305,11 +296,7 @@ export class HarmonicResonanceServer extends EventEmitter {
         try {
           session.ws.send(message);
         } catch (error: any) {
-          console.error(`🔥 Error sending to ${session.userId}:`, {
-            error: error.message,
-            userId: session.userId,
-            timestamp: Date.now()
-          });
+          console.error(`Error sending to ${session.userId}:`, error);
           this.handleDisconnection(session.userId);
         }
       }
