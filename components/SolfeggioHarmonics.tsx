@@ -14,7 +14,6 @@ import { Music, Play, Pause, Volume2, VolumeX } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useMemoryField } from '@/providers/MemoryFieldProvider';
 import { useSolfeggio } from '@/providers/SolfeggioProvider';
-import { useHarmonicBridge } from '@/hooks/useHarmonicBridge';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -42,18 +41,6 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
     getAllFrequencies
   } = useSolfeggio();
   
-  // Enhanced harmonic bridge with backend integration
-  const {
-    globalResonance,
-    activeNodes,
-    sacredGeometryActive,
-    isConnected,
-    consciousnessResonanceBoost,
-    isPhiResonanceActive,
-    harmonicPressure,
-    fieldStability
-  } = useHarmonicBridge();
-  
   const [harmonicResonance, setHarmonicResonance] = useState(0);
   
   // Get all frequencies from the engine
@@ -79,18 +66,12 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
   const resonanceAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(0)).current;
   
-  // Enhanced harmonic resonance combining local and global field data
+  // Calculate harmonic resonance based on quantum coherence and memory alignment
   const calculatedResonance = useMemo(() => {
-    if (!visible) return 0;
+    if (!visible || activeFrequencies.size === 0) return 0;
     
-    // Base resonance from local engine
-    const localResonance = quantumCoherence.coherence;
-    
-    // Global resonance from backend harmonic field
-    const backendResonance = globalResonance;
-    
-    // Consciousness resonance boost from harmonic synchronization
-    const consciousnessBoost = consciousnessResonanceBoost;
+    // Use quantum coherence from the engine
+    const baseResonance = quantumCoherence.coherence;
     
     // Factor in memory alignment
     let memoryAlignment = 0;
@@ -112,21 +93,8 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
     });
     
     const avgMemoryAlignment = alignedCount > 0 ? memoryAlignment / alignedCount : 0;
-    
-    // Combine all resonance sources
-    const combinedResonance = (
-      localResonance * 0.4 + 
-      backendResonance * 0.3 + 
-      consciousnessBoost * 0.2 + 
-      avgMemoryAlignment * 0.1
-    ) * globalCoherence;
-    
-    // Boost for sacred geometry and phi harmonics
-    const sacredBoost = sacredGeometryActive ? 0.15 : 0;
-    const phiBoost = isPhiResonanceActive ? 0.1 : 0;
-    
-    return Math.min(1, combinedResonance + sacredBoost + phiBoost);
-  }, [visible, activeFrequencies, memories, globalCoherence, quantumCoherence, getAllFrequencies, globalResonance, consciousnessResonanceBoost, sacredGeometryActive, isPhiResonanceActive]);
+    return (baseResonance * 0.7 + avgMemoryAlignment * 0.3) * globalCoherence;
+  }, [visible, activeFrequencies, memories, globalCoherence, quantumCoherence, getAllFrequencies]);
   
   // Update harmonic resonance with smooth animation
   useEffect(() => {
@@ -467,18 +435,13 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
             })}
           </View>
           
-          {/* Enhanced Status with Backend Data */}
+          {/* Status */}
           <View style={styles.status}>
             <Text style={styles.statusText}>
-              Local: {activeFrequencies.size} • Global: {activeNodes} nodes • 
-              {sacredGeometryActive && '🌀 Sacred Geometry • '}
-              {isPhiResonanceActive && 'φ-Resonance • '}
-              Coherence: {(globalCoherence * 100).toFixed(0)}%
-            </Text>
-            <Text style={[styles.statusText, { marginTop: 4, fontSize: 10 }]}>
-              Backend: {isConnected ? '🟢 Connected' : '🔴 Offline'} • 
-              Field: {fieldStability ? 'Stable' : 'Fluctuating'} • 
-              Pressure: {(harmonicPressure * 100).toFixed(0)}%
+              Active: {activeFrequencies.size} frequencies • 
+              Mode: {harmonicMode} • 
+              Coherence: {(globalCoherence * 100).toFixed(0)}% • 
+              Ψ-Bloom: {(quantumCoherence.psi_bloom * 100).toFixed(0)}%
             </Text>
           </View>
         </View>
