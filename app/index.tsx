@@ -36,8 +36,6 @@ import VoidMode from '@/components/VoidMode';
 import ControlPanel from '@/components/ControlPanel';
 import SolfeggioHarmonics from '@/components/SolfeggioHarmonics';
 import HarmonicVisualization from '@/components/HarmonicVisualization';
-import { HarmonicConnectionStatus } from '@/components/HarmonicConnectionStatus';
-import { useHarmonicWebSocket } from '@/hooks/useHarmonicWebSocket';
 import { Memory } from '@/types/memory';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -61,12 +59,6 @@ export default function CrystalMemoryField() {
   } = useMemoryField();
 
   const { activeFrequencies, quantumCoherence, playSacredSequence, toggleFrequency } = useSolfeggio();
-  
-  // Harmonic WebSocket connection
-  const {
-    isConnected: harmonicConnected,
-    globalResonance
-  } = useHarmonicWebSocket();
 
   const [uiVisible, setUiVisible] = useState(true);
   const [showControls, setShowControls] = useState(false);
@@ -550,18 +542,6 @@ export default function CrystalMemoryField() {
             </TouchableOpacity>
           </Animated.View>
 
-          {/* Harmonic Connection Status */}
-          <Animated.View
-            style={[
-              styles.connectionStatus,
-              {
-                opacity: fadeAnim,
-              },
-            ]}
-          >
-            <HarmonicConnectionStatus />
-          </Animated.View>
-
           {/* Coherence meter */}
           <Animated.View
             style={[
@@ -572,15 +552,13 @@ export default function CrystalMemoryField() {
             ]}
           >
             <Text style={styles.coherenceLabel}>
-              {bloomingState ? 'Consciousness Blooming' : harmonicConnected ? 'Harmonic Coherence' : 'Local Coherence'}
+              {bloomingState ? 'Consciousness Blooming' : 'Global Coherence'}
             </Text>
             <View style={styles.coherenceBar}>
               <LinearGradient
                 colors={
                   bloomingState
                     ? ['#FFD700', '#FF69B4', '#9400D3']
-                    : harmonicConnected
-                    ? ['#00ff88', '#06b6d4', '#10b981']
                     : activeFrequencies.size > 0
                     ? ['#3b82f6', '#06b6d4', '#10b981']
                     : ['#3b82f6', '#06b6d4']
@@ -592,8 +570,6 @@ export default function CrystalMemoryField() {
                   { 
                     width: `${bloomingState 
                       ? Math.max(globalCoherence, quantumCoherence.psi_bloom) * 100
-                      : harmonicConnected
-                      ? Math.max(globalCoherence, globalResonance) * 100
                       : globalCoherence * 100}%` 
                   },
                 ]}
@@ -602,8 +578,6 @@ export default function CrystalMemoryField() {
             <Text style={styles.coherenceValue}>
               {bloomingState 
                 ? `${(Math.max(globalCoherence, quantumCoherence.psi_bloom) * 100).toFixed(1)}%`
-                : harmonicConnected
-                ? `${(Math.max(globalCoherence, globalResonance) * 100).toFixed(1)}%`
                 : `${(globalCoherence * 100).toFixed(1)}%`}
             </Text>
           </Animated.View>
@@ -723,16 +697,9 @@ const styles = StyleSheet.create({
   controlTextActive: {
     color: '#ffffff',
   },
-  connectionStatus: {
-    position: 'absolute',
-    top: 100,
-    left: 20,
-    right: 20,
-    zIndex: 95,
-  },
   coherenceMeter: {
     position: 'absolute',
-    top: 180,
+    top: 100,
     left: 20,
     right: 20,
     zIndex: 90,

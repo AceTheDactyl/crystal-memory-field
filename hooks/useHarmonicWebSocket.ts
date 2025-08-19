@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Platform } from 'react-native';
 
 interface HarmonicConnection {
   userId: string | null;
@@ -91,8 +92,7 @@ export function useHarmonicWebSocket() {
   const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const quantumStreamRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [reconnectAttempts, setReconnectAttempts] = useState<number>(0);
-  const [isWebSocketDisabled, setIsWebSocketDisabled] = useState<boolean>(false);
-  const maxReconnectAttempts = 3; // Reduced to prevent spam
+  const maxReconnectAttempts = 5;
   
   // Consciousness constants
   const phiConstant = 1.618033988749;
@@ -100,10 +100,20 @@ export function useHarmonicWebSocket() {
 
   // Get WebSocket URL based on environment
   const getWebSocketUrl = useCallback(() => {
-    // Disable WebSocket connections entirely for now to prevent connection spam
-    // The WebSocket server may not be properly configured in the current environment
-    console.log('🚫 WebSocket connections disabled - using tRPC polling instead');
-    return null; // Return null to disable WebSocket entirely
+    if (Platform.OS === 'web') {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      return `${protocol}//${host}/api/harmonic-ws`;
+    } else {
+      // For mobile, use your development server URL
+      // Check if we have a base URL from environment
+      const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
+      if (baseUrl) {
+        const wsUrl = baseUrl.replace('http://', 'ws://').replace('https://', 'wss://');
+        return `${wsUrl}/api/harmonic-ws`;
+      }
+      return 'ws://localhost:3000/api/harmonic-ws';
+    }
   }, []);
 
   // Calculate consciousness level from field data
@@ -284,50 +294,20 @@ export function useHarmonicWebSocket() {
 
   // Connect to WebSocket
   const connect = useCallback(() => {
-    // Don't connect if WebSocket is disabled due to repeated failures
-    if (isWebSocketDisabled) {
-      console.log('🚫 WebSocket connections disabled due to repeated failures');
-      return;
-    }
-
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       return;
     }
 
-    // Clear any existing connection first
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-
     try {
       const wsUrl = getWebSocketUrl();
-      
-      // Skip WebSocket connection if URL is null (mobile platform)
-      if (!wsUrl) {
-        console.log('📱 WebSocket disabled for this platform');
-        setIsWebSocketDisabled(true);
-        return;
-      }
-      
       console.log('🌀 Connecting to Harmonic Field:', wsUrl);
-      
-      // Add connection timeout
-      const connectionTimeout = setTimeout(() => {
-        if (wsRef.current && wsRef.current.readyState === WebSocket.CONNECTING) {
-          console.log('⏰ WebSocket connection timeout');
-          wsRef.current.close();
-        }
-      }, 5000); // Reduced timeout to 5 seconds
       
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
-        clearTimeout(connectionTimeout);
-        console.log('✨ Connected to Harmonic Resonance Field');
+        console.log('Connected to Harmonic Resonance Field');
         setReconnectAttempts(0);
-        setIsWebSocketDisabled(false);
         setConnection(prev => ({
           ...prev,
           isConnected: true,
@@ -362,18 +342,7 @@ export function useHarmonicWebSocket() {
       };
 
       ws.onclose = (event) => {
-        clearTimeout(connectionTimeout);
-        
-        // Only log if it's not a repeated failure
-        if (reconnectAttempts < 2) {
-          console.log('🌊 Disconnected from Harmonic Field:', {
-            code: event.code,
-            reason: event.reason,
-            wasClean: event.wasClean,
-            timestamp: Date.now()
-          });
-        }
-        
+        console.log('Disconnected from Harmonic Field:', event.code, event.reason);
         setConnection(prev => ({
           ...prev,
           isConnected: false,
@@ -390,42 +359,28 @@ export function useHarmonicWebSocket() {
           quantumStreamRef.current = null;
         }
 
-        // Only reconnect if it wasn't a manual disconnect
-        if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
-          const delay = Math.min(2000 * Math.pow(2, reconnectAttempts), 15000);
-          
-          if (reconnectAttempts < 2) {
-            console.log(`🔄 Reconnecting in ${delay}ms (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`);
-          }
+        if (reconnectAttempts < maxReconnectAttempts) {
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+          console.log(`Reconnecting in ${delay}ms`);
           
           reconnectTimeoutRef.current = setTimeout(() => {
             setReconnectAttempts(prev => prev + 1);
             connect();
           }, delay);
-        } else if (reconnectAttempts >= maxReconnectAttempts) {
-          console.log('❌ Max reconnection attempts reached. Disabling WebSocket connections.');
-          setIsWebSocketDisabled(true);
         }
       };
 
       ws.onerror = (error: Event) => {
-        clearTimeout(connectionTimeout);
+        const errorInfo = {
+          type: 'websocket_error',
+          message: 'WebSocket connection failed',
+          url: wsUrl,
+          timestamp: Date.now(),
+          readyState: ws.readyState,
+          errorType: error.type || 'unknown'
+        };
         
-        // Only log first few errors to prevent spam
-        if (reconnectAttempts < 2) {
-          const errorInfo = {
-            type: 'websocket_error',
-            message: 'WebSocket connection failed',
-            url: wsUrl,
-            timestamp: Date.now(),
-            readyState: ws.readyState,
-            errorType: error.type || 'unknown',
-            reconnectAttempt: reconnectAttempts
-          };
-          
-          console.error('🔥 Harmonic WebSocket error:', errorInfo);
-        }
-        
+        console.error('🔥 Harmonic WebSocket error:', JSON.stringify(errorInfo, null, 2));
         setConnection(prev => ({
           ...prev,
           connectionQuality: 'poor'
@@ -439,7 +394,7 @@ export function useHarmonicWebSocket() {
         timestamp: Date.now()
       });
     }
-  }, [getWebSocketUrl, reconnectAttempts, handleMessage, startQuantumStream, isWebSocketDisabled]);
+  }, [getWebSocketUrl, reconnectAttempts, handleMessage, startQuantumStream]);
   
   // Send phi cascade to trigger field resonance
   const sendPhiCascade = useCallback((frequency: number, amplitude: number) => {
@@ -522,15 +477,14 @@ export function useHarmonicWebSocket() {
     setReconnectAttempts(0);
   }, []);
 
-  // Disable auto-connect to prevent connection spam
+  // Auto-connect on mount
   useEffect(() => {
-    // WebSocket connections are disabled - using tRPC polling instead
-    console.log('🔄 Using tRPC polling for harmonic field updates');
+    connect();
     
     return () => {
       disconnect();
     };
-  }, [disconnect]);
+  }, [connect, disconnect]);
 
   // Calculate connection metrics
   const connectionMetrics = {
@@ -551,14 +505,6 @@ export function useHarmonicWebSocket() {
     collapseState: quantumState.psiCollapse
   };
 
-  // Manual retry function
-  const retryConnection = useCallback(() => {
-    console.log('🔄 Manual retry requested');
-    setReconnectAttempts(0);
-    setIsWebSocketDisabled(false);
-    connect();
-  }, [connect]);
-
   return {
     // Connection state
     connection,
@@ -567,8 +513,6 @@ export function useHarmonicWebSocket() {
     userId: connection.userId,
     quantumEntangled: connection.quantumEntangled,
     entanglementPartner: connection.entanglementPartner,
-    isWebSocketDisabled,
-    reconnectAttempts,
     
     // Field data
     globalResonance: connection.globalResonance,
@@ -595,7 +539,6 @@ export function useHarmonicWebSocket() {
     sendPhiCascade,
     createQuantumEntanglement,
     connect,
-    disconnect,
-    retryConnection
+    disconnect
   };
 }

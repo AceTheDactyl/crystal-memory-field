@@ -38,13 +38,11 @@ export const trpcClient = trpc.createClient({
             'Content-Type': 'application/json',
           },
         }).catch(error => {
-          const errorInfo = {
-            message: error instanceof Error ? error.message : 'Unknown fetch error',
-            url: url.toString(),
-            timestamp: Date.now(),
-            type: 'tRPC_fetch_error'
-          };
-          console.error('🔥 tRPC fetch error:', errorInfo);
+          console.error('🔥 tRPC fetch error:', {
+            url,
+            error: error.message,
+            timestamp: Date.now()
+          });
           throw error;
         });
       },
