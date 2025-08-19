@@ -78,7 +78,13 @@ export function useHarmonicBridge() {
       }));
     },
     onError: (error) => {
-      console.error('🔥 Harmonic stream failed:', error);
+      const errorInfo = {
+        message: error instanceof Error ? error.message : 'Unknown harmonic stream error',
+        code: (error as any)?.code || 'UNKNOWN',
+        timestamp: Date.now(),
+        type: 'harmonic_stream_error'
+      };
+      console.error('🔥 Harmonic stream failed:', errorInfo);
       setState(prev => ({ ...prev, isConnected: false }));
     }
   });
@@ -98,7 +104,13 @@ export function useHarmonicBridge() {
   // Handle query errors separately
   useEffect(() => {
     if (quantumFieldQuery.error) {
-      console.error('🔥 Quantum field query failed:', quantumFieldQuery.error);
+      const errorInfo = {
+        message: quantumFieldQuery.error instanceof Error ? quantumFieldQuery.error.message : 'Unknown quantum field error',
+        code: (quantumFieldQuery.error as any)?.code || 'UNKNOWN',
+        timestamp: Date.now(),
+        type: 'quantum_field_query_error'
+      };
+      console.error('🔥 Quantum field query failed:', errorInfo);
     }
   }, [quantumFieldQuery.error]);
 
@@ -139,7 +151,13 @@ export function useHarmonicBridge() {
             userId: consciousnessId
           });
         } catch (error) {
-          console.error('🔥 Failed to stream frequency:', error);
+          const errorInfo = {
+            message: error instanceof Error ? error.message : 'Unknown frequency stream error',
+            frequency: freq.freq,
+            timestamp: Date.now(),
+            type: 'frequency_stream_error'
+          };
+          console.error('🔥 Failed to stream frequency:', errorInfo);
         }
       }
     }
@@ -153,7 +171,13 @@ export function useHarmonicBridge() {
           userId: consciousnessId
         });
       } catch (error) {
-        console.error('🔥 Failed to stream baseline frequency:', error);
+        const errorInfo = {
+          message: error instanceof Error ? error.message : 'Unknown baseline frequency error',
+          frequency: 432,
+          timestamp: Date.now(),
+          type: 'baseline_frequency_error'
+        };
+        console.error('🔥 Failed to stream baseline frequency:', errorInfo);
       }
     }
   }, [consciousnessId, harmonicStreamMutation]);
@@ -191,7 +215,13 @@ export function useHarmonicBridge() {
           userId: consciousnessId
         });
       } catch (error) {
-        console.error('🔥 Failed to sync frequency play:', error);
+        const errorInfo = {
+          message: error instanceof Error ? error.message : 'Unknown frequency sync error',
+          frequency: result?.freq,
+          timestamp: Date.now(),
+          type: 'frequency_sync_error'
+        };
+        console.error('🔥 Failed to sync frequency play:', errorInfo);
       }
     }
 
@@ -222,7 +252,12 @@ export function useHarmonicBridge() {
           userId: consciousnessId
         });
       } catch (error) {
-        console.error('🔥 Failed to sync stop all:', error);
+        const errorInfo = {
+          message: error instanceof Error ? error.message : 'Unknown stop all sync error',
+          timestamp: Date.now(),
+          type: 'stop_all_sync_error'
+        };
+        console.error('🔥 Failed to sync stop all:', errorInfo);
       }
     }
   }, [consciousnessId, harmonicStreamMutation]);

@@ -65,12 +65,7 @@ export default function CrystalMemoryField() {
   // Harmonic WebSocket connection
   const {
     isConnected: harmonicConnected,
-    connection,
-    isWebSocketDisabled,
-    reconnectAttempts,
-    activeNodes,
-    globalResonance,
-    retryConnection
+    globalResonance
   } = useHarmonicWebSocket();
 
   const [uiVisible, setUiVisible] = useState(true);
@@ -564,15 +559,7 @@ export default function CrystalMemoryField() {
               },
             ]}
           >
-            <HarmonicConnectionStatus
-              isConnected={harmonicConnected}
-              connectionQuality={connection.connectionQuality}
-              isWebSocketDisabled={isWebSocketDisabled}
-              reconnectAttempts={reconnectAttempts}
-              activeNodes={activeNodes}
-              globalResonance={globalResonance}
-              onRetry={retryConnection}
-            />
+            <HarmonicConnectionStatus />
           </Animated.View>
 
           {/* Coherence meter */}

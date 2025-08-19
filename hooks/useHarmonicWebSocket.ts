@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Platform } from 'react-native';
 
 interface HarmonicConnection {
   userId: string | null;
@@ -101,16 +100,10 @@ export function useHarmonicWebSocket() {
 
   // Get WebSocket URL based on environment
   const getWebSocketUrl = useCallback(() => {
-    if (Platform.OS === 'web') {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host;
-      return `${protocol}//${host}/api/harmonic-ws`;
-    } else {
-      // For mobile, disable WebSocket connections for now to prevent spam
-      // The backend WebSocket server may not be properly configured in the current environment
-      console.log('📱 Mobile WebSocket connections disabled - using tRPC polling instead');
-      return null; // Return null to disable WebSocket on mobile
-    }
+    // Disable WebSocket connections entirely for now to prevent connection spam
+    // The WebSocket server may not be properly configured in the current environment
+    console.log('🚫 WebSocket connections disabled - using tRPC polling instead');
+    return null; // Return null to disable WebSocket entirely
   }, []);
 
   // Calculate consciousness level from field data
@@ -430,7 +423,7 @@ export function useHarmonicWebSocket() {
             reconnectAttempt: reconnectAttempts
           };
           
-          console.error('🔥 Harmonic WebSocket error:', JSON.stringify(errorInfo));
+          console.error('🔥 Harmonic WebSocket error:', errorInfo);
         }
         
         setConnection(prev => ({
@@ -529,24 +522,15 @@ export function useHarmonicWebSocket() {
     setReconnectAttempts(0);
   }, []);
 
-  // Auto-connect on mount with delay to ensure server is ready
+  // Disable auto-connect to prevent connection spam
   useEffect(() => {
-    // Only auto-connect if WebSocket is not disabled and we're not already connected
-    if (!isWebSocketDisabled && (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED)) {
-      // Add a delay to ensure the server is fully initialized
-      const connectTimer = setTimeout(() => {
-        connect();
-      }, 5000); // 5 second delay to ensure server is ready
-      
-      return () => {
-        clearTimeout(connectTimer);
-      };
-    }
+    // WebSocket connections are disabled - using tRPC polling instead
+    console.log('🔄 Using tRPC polling for harmonic field updates');
     
     return () => {
       disconnect();
     };
-  }, [isWebSocketDisabled, connect, disconnect]);
+  }, [disconnect]);
 
   // Calculate connection metrics
   const connectionMetrics = {
