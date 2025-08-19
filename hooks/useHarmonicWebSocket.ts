@@ -59,7 +59,12 @@ export function useHarmonicWebSocket() {
       const host = window.location.host;
       return `${protocol}//${host}/api/harmonic-ws`;
     } else {
-      // For mobile, use your development server URL
+      // For mobile, use the same base URL as tRPC but with WebSocket protocol
+      if (process.env.EXPO_PUBLIC_RORK_API_BASE_URL) {
+        const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
+        const wsUrl = baseUrl.replace('https://', 'wss://').replace('http://', 'ws://');
+        return `${wsUrl}/api/harmonic-ws`;
+      }
       return 'ws://localhost:3000/api/harmonic-ws';
     }
   }, []);
@@ -167,7 +172,15 @@ export function useHarmonicWebSocket() {
       };
 
       ws.onerror = (error) => {
-        console.error('Harmonic WebSocket error:', error);
+        const errorInfo = {
+          type: 'websocket_error',
+          message: 'WebSocket connection failed',
+          url: wsUrl,
+          timestamp: Date.now(),
+          readyState: ws.readyState,
+          errorType: 'error'
+        };
+        console.error('🔥 Harmonic WebSocket error:', JSON.stringify(errorInfo));
         setConnection(prev => ({
           ...prev,
           connectionQuality: 'poor'
