@@ -118,7 +118,7 @@ export function useHarmonicBridge() {
       if (freq) {
         try {
           await harmonicStreamMutation.mutateAsync({
-            frequency: freq.freq, // Use freq property
+            frequency: freq.freq,
             amplitude: freq.quantum.psi_bloom, // Use psi_bloom as amplitude
             userId: consciousnessId
           });

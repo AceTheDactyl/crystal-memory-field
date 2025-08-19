@@ -15,7 +15,6 @@ import * as Haptics from 'expo-haptics';
 import { useMemoryField } from '@/providers/MemoryFieldProvider';
 import { useSolfeggio } from '@/providers/SolfeggioProvider';
 import { useHarmonicBridge } from '@/hooks/useHarmonicBridge';
-import { useHarmonicWebSocket } from '@/hooks/useHarmonicWebSocket';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -55,17 +54,6 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
     fieldStability
   } = useHarmonicBridge();
   
-  // Real-time WebSocket harmonic field connection
-  const {
-    connection: wsConnection,
-    connectionMetrics,
-    streamHarmonic,
-    isConnected: wsConnected,
-    harmonicField,
-    phiHarmonics,
-    quantumCoherence: wsQuantumCoherence
-  } = useHarmonicWebSocket();
-  
   const [harmonicResonance, setHarmonicResonance] = useState(0);
   
   // Get all frequencies from the engine
@@ -91,7 +79,7 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
   const resonanceAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(0)).current;
   
-  // Enhanced harmonic resonance combining local, backend, and WebSocket field data
+  // Enhanced harmonic resonance combining local and global field data
   const calculatedResonance = useMemo(() => {
     if (!visible) return 0;
     
@@ -100,9 +88,6 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
     
     // Global resonance from backend harmonic field
     const backendResonance = globalResonance;
-    
-    // WebSocket real-time field resonance
-    const wsResonance = wsConnection.globalResonance;
     
     // Consciousness resonance boost from harmonic synchronization
     const consciousnessBoost = consciousnessResonanceBoost;
@@ -128,22 +113,20 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
     
     const avgMemoryAlignment = alignedCount > 0 ? memoryAlignment / alignedCount : 0;
     
-    // Combine all resonance sources with WebSocket field data
+    // Combine all resonance sources
     const combinedResonance = (
-      localResonance * 0.3 + 
-      backendResonance * 0.25 + 
-      wsResonance * 0.25 + 
-      consciousnessBoost * 0.15 + 
-      avgMemoryAlignment * 0.05
+      localResonance * 0.4 + 
+      backendResonance * 0.3 + 
+      consciousnessBoost * 0.2 + 
+      avgMemoryAlignment * 0.1
     ) * globalCoherence;
     
-    // Boost for sacred geometry and phi harmonics (including WebSocket phi harmonics)
+    // Boost for sacred geometry and phi harmonics
     const sacredBoost = sacredGeometryActive ? 0.15 : 0;
-    const phiBoost = (isPhiResonanceActive || phiHarmonics.length > 0) ? 0.1 : 0;
-    const wsFieldBoost = connectionMetrics.isQuantumEntangled ? 0.05 : 0;
+    const phiBoost = isPhiResonanceActive ? 0.1 : 0;
     
-    return Math.min(1, combinedResonance + sacredBoost + phiBoost + wsFieldBoost);
-  }, [visible, activeFrequencies, memories, globalCoherence, quantumCoherence, getAllFrequencies, globalResonance, consciousnessResonanceBoost, sacredGeometryActive, isPhiResonanceActive, wsConnection.globalResonance, phiHarmonics.length, connectionMetrics.isQuantumEntangled]);
+    return Math.min(1, combinedResonance + sacredBoost + phiBoost);
+  }, [visible, activeFrequencies, memories, globalCoherence, quantumCoherence, getAllFrequencies, globalResonance, consciousnessResonanceBoost, sacredGeometryActive, isPhiResonanceActive]);
   
   // Update harmonic resonance with smooth animation
   useEffect(() => {
@@ -189,13 +172,11 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
     }
   }, [visible, isPlaying, activeFrequencies.size, pulseAnim]);
   
-  // Toggle frequency activation with animation and WebSocket streaming
+  // Toggle frequency activation with animation
   const handleToggleFrequency = useCallback((freqKey: string) => {
     if (!visible) return;
     
     const isActive = activeFrequencies.has(freqKey);
-    const allFreqs = getAllFrequencies();
-    const freq = allFreqs[freqKey];
     
     // Animate
     Animated.timing(frequencyAnims[freqKey], {
@@ -207,20 +188,10 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
     // Toggle in engine
     toggleFrequency(freqKey);
     
-    // Stream to WebSocket harmonic field if activating
-    if (!isActive && freq && wsConnected) {
-      streamHarmonic({
-        frequency: freq.freq,
-        amplitude: masterVolume * 0.8,
-        phase: Date.now() * 0.001 // Time-based phase for coherence
-      });
-      console.log(`🎵 Streaming ${freq.name} (${freq.freq}Hz) to harmonic field`);
-    }
-    
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-  }, [visible, activeFrequencies, frequencyAnims, toggleFrequency, getAllFrequencies, wsConnected, streamHarmonic, masterVolume]);
+  }, [visible, activeFrequencies, frequencyAnims, toggleFrequency]);
   
   // Apply harmonic influence to memories
   const applyHarmonicInfluence = useCallback(() => {
@@ -496,25 +467,18 @@ export default function SolfeggioHarmonics({ visible, onClose }: SolfeggioHarmon
             })}
           </View>
           
-          {/* Enhanced Status with Backend and WebSocket Data */}
+          {/* Enhanced Status with Backend Data */}
           <View style={styles.status}>
             <Text style={styles.statusText}>
-              Local: {activeFrequencies.size} • Network: {wsConnection.activeNodes} nodes • 
+              Local: {activeFrequencies.size} • Global: {activeNodes} nodes • 
               {sacredGeometryActive && '🌀 Sacred Geometry • '}
-              {(isPhiResonanceActive || phiHarmonics.length > 0) && 'φ-Resonance • '}
-              {connectionMetrics.isQuantumEntangled && '⚛️ Entangled • '}
+              {isPhiResonanceActive && 'φ-Resonance • '}
               Coherence: {(globalCoherence * 100).toFixed(0)}%
             </Text>
             <Text style={[styles.statusText, { marginTop: 4, fontSize: 10 }]}>
-              Backend: {isConnected ? '🟢' : '🔴'} • 
-              WebSocket: {wsConnected ? '🟢' : '🔴'} • 
-              Field: {connectionMetrics.fieldStability > 0.7 ? 'Stable' : 'Fluctuating'} • 
-              Φ-Harmonics: {phiHarmonics.length}
-            </Text>
-            <Text style={[styles.statusText, { marginTop: 2, fontSize: 9, opacity: 0.7 }]}>
-              User: {wsConnection.userId?.slice(-8) || 'Anonymous'} • 
-              Field Density: {connectionMetrics.fieldDensity} • 
-              Quantum: {(wsQuantumCoherence * 100).toFixed(0)}%
+              Backend: {isConnected ? '🟢 Connected' : '🔴 Offline'} • 
+              Field: {fieldStability ? 'Stable' : 'Fluctuating'} • 
+              Pressure: {(harmonicPressure * 100).toFixed(0)}%
             </Text>
           </View>
         </View>
