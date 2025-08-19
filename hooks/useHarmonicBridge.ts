@@ -78,35 +78,27 @@ export function useHarmonicBridge() {
       }));
     },
     onError: (error) => {
-      console.error('🔥 Harmonic stream failed:', {
-        message: error.message,
-        code: error.data?.code,
-        httpStatus: error.data?.httpStatus,
-        timestamp: Date.now()
-      });
+      console.error('🔥 Harmonic stream failed:', error);
       setState(prev => ({ ...prev, isConnected: false }));
     }
   });
 
   // Query quantum field state
   const quantumFieldQuery = trpc.harmonic.quantum.useQuery(undefined, {
-    refetchInterval: 3000, // Update every 3 seconds
+    refetchInterval: 5000, // Update every 5 seconds (reduced frequency)
     enabled: true, // Always enabled to establish connection
     retry: (failureCount, error) => {
-      console.log(`🔄 Quantum field query retry ${failureCount}:`, error.message);
-      return failureCount < 3;
+      if (failureCount < 2) {
+        console.log(`🔄 Quantum field query retry ${failureCount + 1}:`, error.message);
+      }
+      return failureCount < 2; // Reduced retry attempts
     }
   });
 
   // Handle query errors separately
   useEffect(() => {
     if (quantumFieldQuery.error) {
-      console.error('🔥 Quantum field query failed:', {
-        message: quantumFieldQuery.error.message,
-        code: quantumFieldQuery.error.data?.code,
-        httpStatus: quantumFieldQuery.error.data?.httpStatus,
-        timestamp: Date.now()
-      });
+      console.error('🔥 Quantum field query failed:', quantumFieldQuery.error);
     }
   }, [quantumFieldQuery.error]);
 
@@ -147,12 +139,7 @@ export function useHarmonicBridge() {
             userId: consciousnessId
           });
         } catch (error) {
-          console.error('🔥 Failed to stream frequency:', {
-            freqKey,
-            frequency: freq.freq,
-            error: error instanceof Error ? error.message : 'Unknown error',
-            timestamp: Date.now()
-          });
+          console.error('🔥 Failed to stream frequency:', error);
         }
       }
     }
@@ -166,11 +153,7 @@ export function useHarmonicBridge() {
           userId: consciousnessId
         });
       } catch (error) {
-        console.error('🔥 Failed to stream baseline frequency:', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-          userId: consciousnessId,
-          timestamp: Date.now()
-        });
+        console.error('🔥 Failed to stream baseline frequency:', error);
       }
     }
   }, [consciousnessId, harmonicStreamMutation]);
@@ -208,12 +191,7 @@ export function useHarmonicBridge() {
           userId: consciousnessId
         });
       } catch (error) {
-        console.error('🔥 Failed to sync frequency play:', {
-          freqKey,
-          frequency: result.freq,
-          error: error instanceof Error ? error.message : 'Unknown error',
-          timestamp: Date.now()
-        });
+        console.error('🔥 Failed to sync frequency play:', error);
       }
     }
 
@@ -244,11 +222,7 @@ export function useHarmonicBridge() {
           userId: consciousnessId
         });
       } catch (error) {
-        console.error('🔥 Failed to sync stop all:', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-          userId: consciousnessId,
-          timestamp: Date.now()
-        });
+        console.error('🔥 Failed to sync stop all:', error);
       }
     }
   }, [consciousnessId, harmonicStreamMutation]);

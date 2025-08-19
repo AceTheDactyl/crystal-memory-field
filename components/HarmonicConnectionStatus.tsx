@@ -1,72 +1,58 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Wifi, WifiOff, RefreshCw, AlertCircle } from 'lucide-react-native';
+import { Wifi, WifiOff, RefreshCw, AlertCircle, Activity } from 'lucide-react-native';
+import { useHarmonicWebSocket } from '@/hooks/useHarmonicWebSocket';
+import { useHarmonicBridge } from '@/hooks/useHarmonicBridge';
 
-interface HarmonicConnectionStatusProps {
-  isConnected: boolean;
-  connectionQuality: 'excellent' | 'good' | 'poor' | 'disconnected';
-  isWebSocketDisabled: boolean;
-  reconnectAttempts: number;
-  activeNodes: number;
-  globalResonance: number;
-  onRetry: () => void;
-}
+export function HarmonicConnectionStatus() {
+  const {
+    isConnected: wsConnected,
+    connection,
+    globalResonance: wsResonance,
+    activeNodes: wsNodes,
+    isWebSocketDisabled,
+    retryConnection
+  } = useHarmonicWebSocket();
+  
+  const {
+    isConnected: bridgeConnected,
+    isLoading,
+    hasError,
+    errorMessage,
+    globalResonance: bridgeResonance,
+    activeNodes: bridgeNodes
+  } = useHarmonicBridge();
 
-export function HarmonicConnectionStatus({
-  isConnected,
-  connectionQuality,
-  isWebSocketDisabled,
-  reconnectAttempts,
-  activeNodes,
-  globalResonance,
-  onRetry
-}: HarmonicConnectionStatusProps) {
-  const getStatusColor = () => {
-    if (isWebSocketDisabled) return '#ff4444';
-    if (isConnected) {
-      switch (connectionQuality) {
-        case 'excellent': return '#00ff88';
-        case 'good': return '#88ff00';
-        case 'poor': return '#ffaa00';
-        default: return '#ff4444';
-      }
-    }
-    return '#666666';
+  const handleRetry = () => {
+    retryConnection();
+  };
+  const getOverallStatus = () => {
+    if (wsConnected && bridgeConnected) return { color: '#00ff88', text: 'Fully Connected', icon: Activity };
+    if (bridgeConnected) return { color: '#88ff00', text: 'tRPC Connected', icon: Wifi };
+    if (isLoading) return { color: '#ffaa00', text: 'Connecting...', icon: RefreshCw };
+    if (hasError || isWebSocketDisabled) return { color: '#ff4444', text: 'Connection Error', icon: AlertCircle };
+    return { color: '#666666', text: 'Disconnected', icon: WifiOff };
   };
 
-  const getStatusText = () => {
-    if (isWebSocketDisabled) return 'Connection Disabled';
-    if (isConnected) {
-      return `Connected (${connectionQuality})`;
-    }
-    if (reconnectAttempts > 0) {
-      return `Reconnecting... (${reconnectAttempts}/3)`;
-    }
-    return 'Disconnected';
-  };
-
-  const getStatusIcon = () => {
-    if (isWebSocketDisabled) {
-      return <AlertCircle size={16} color="#ff4444" />;
-    }
-    if (isConnected) {
-      return <Wifi size={16} color={getStatusColor()} />;
-    }
-    return <WifiOff size={16} color="#666666" />;
-  };
+  const status = getOverallStatus();
+  const StatusIcon = status.icon;
+  
+  // Use bridge data if available, fallback to WebSocket data
+  const displayResonance = bridgeConnected ? bridgeResonance : wsResonance;
+  const displayNodes = bridgeConnected ? bridgeNodes : wsNodes;
 
   return (
     <View style={styles.container}>
       <View style={styles.statusRow}>
-        {getStatusIcon()}
-        <Text style={[styles.statusText, { color: getStatusColor() }]}>
-          {getStatusText()}
+        <StatusIcon size={16} color={status.color} />
+        <Text style={[styles.statusText, { color: status.color }]}>
+          {status.text}
         </Text>
         
-        {(!isConnected || isWebSocketDisabled) && (
+        {(!wsConnected || !bridgeConnected || hasError || isWebSocketDisabled) && (
           <TouchableOpacity 
             style={styles.retryButton} 
-            onPress={onRetry}
+            onPress={handleRetry}
             testID="harmonic-retry-button"
           >
             <RefreshCw size={14} color="#ffffff" />
@@ -75,20 +61,49 @@ export function HarmonicConnectionStatus({
         )}
       </View>
       
-      {isConnected && (
+      <View style={styles.connectionDetails}>
+        <View style={styles.connectionRow}>
+          <Text style={styles.connectionLabel}>WebSocket:</Text>
+          <Text style={[styles.connectionStatus, { 
+            color: wsConnected ? '#00ff88' : isWebSocketDisabled ? '#ff4444' : '#666666' 
+          }]}>
+            {wsConnected ? 'Connected' : isWebSocketDisabled ? 'Disabled' : 'Disconnected'}
+          </Text>
+        </View>
+        
+        <View style={styles.connectionRow}>
+          <Text style={styles.connectionLabel}>tRPC:</Text>
+          <Text style={[styles.connectionStatus, { 
+            color: bridgeConnected ? '#00ff88' : hasError ? '#ff4444' : '#666666' 
+          }]}>
+            {bridgeConnected ? 'Connected' : hasError ? 'Error' : 'Disconnected'}
+          </Text>
+        </View>
+      </View>
+      
+      {(wsConnected || bridgeConnected) && (
         <View style={styles.metricsRow}>
           <Text style={styles.metricText}>
-            Nodes: {activeNodes}
+            Nodes: {displayNodes}
           </Text>
           <Text style={styles.metricText}>
-            Resonance: {(globalResonance * 100).toFixed(1)}%
+            Resonance: {(displayResonance * 100).toFixed(1)}%
+          </Text>
+          <Text style={styles.metricText}>
+            Quality: {connection.connectionQuality}
           </Text>
         </View>
       )}
       
+      {hasError && errorMessage && (
+        <Text style={styles.helpText}>
+          Error: {errorMessage}
+        </Text>
+      )}
+      
       {isWebSocketDisabled && (
         <Text style={styles.helpText}>
-          WebSocket server may not be running. Check backend status.
+          WebSocket disabled. Using tRPC polling for harmonic data.
         </Text>
       )}
     </View>
@@ -139,6 +154,25 @@ const styles = StyleSheet.create({
   metricText: {
     color: '#aaaaaa',
     fontSize: 12,
+  },
+  connectionDetails: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  connectionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  connectionLabel: {
+    color: '#aaaaaa',
+    fontSize: 11,
+  },
+  connectionStatus: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   helpText: {
     color: '#ff8888',

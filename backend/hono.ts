@@ -108,7 +108,7 @@ app.get('/metrics', (c) => {
 });
 
 // WebSocket upgrade endpoint info
-app.get('/api/harmonic-ws', (c) => {
+app.get('/harmonic-ws', (c) => {
   return c.json({
     message: 'Harmonic WebSocket endpoint - upgrade required',
     protocol: 'ws',
@@ -168,7 +168,7 @@ export function initializeWebSocketServer(server: Server) {
       });
       
       // Check if this is a WebSocket upgrade for our harmonic endpoint
-      if (request.url === '/api/harmonic-ws' && request.headers.upgrade === 'websocket') {
+      if ((request.url === '/api/harmonic-ws' || request.url === '/harmonic-ws') && request.headers.upgrade === 'websocket') {
         console.log('✅ Handling WebSocket upgrade for harmonic endpoint');
         
         wss.handleUpgrade(request, socket, head, (ws) => {
@@ -179,7 +179,7 @@ export function initializeWebSocketServer(server: Server) {
         console.log('❌ WebSocket upgrade rejected:', {
           url: request.url,
           upgrade: request.headers.upgrade,
-          reason: request.url !== '/api/harmonic-ws' ? 'wrong path' : 'not websocket upgrade'
+          reason: !request.url?.includes('harmonic-ws') ? 'wrong path' : 'not websocket upgrade'
         });
         socket.destroy();
       }

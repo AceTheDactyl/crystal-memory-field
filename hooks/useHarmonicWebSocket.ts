@@ -106,21 +106,10 @@ export function useHarmonicWebSocket() {
       const host = window.location.host;
       return `${protocol}//${host}/api/harmonic-ws`;
     } else {
-      // For mobile, use your development server URL
-      // Check if we have a base URL from environment
-      const baseUrl = process.env.EXPO_PUBLIC_RORK_API_BASE_URL;
-      if (baseUrl) {
-        // Handle the specific URL format from the error
-        if (baseUrl.includes('e2b.app')) {
-          // Extract the correct WebSocket URL for e2b environment
-          const wsUrl = baseUrl.replace('https://', 'wss://').replace('http://', 'ws://');
-          return `${wsUrl}/api/harmonic-ws`;
-        } else {
-          const wsUrl = baseUrl.replace('http://', 'ws://').replace('https://', 'wss://');
-          return `${wsUrl}/api/harmonic-ws`;
-        }
-      }
-      return 'ws://localhost:3000/api/harmonic-ws';
+      // For mobile, disable WebSocket connections for now to prevent spam
+      // The backend WebSocket server may not be properly configured in the current environment
+      console.log('📱 Mobile WebSocket connections disabled - using tRPC polling instead');
+      return null; // Return null to disable WebSocket on mobile
     }
   }, []);
 
@@ -320,6 +309,14 @@ export function useHarmonicWebSocket() {
 
     try {
       const wsUrl = getWebSocketUrl();
+      
+      // Skip WebSocket connection if URL is null (mobile platform)
+      if (!wsUrl) {
+        console.log('📱 WebSocket disabled for this platform');
+        setIsWebSocketDisabled(true);
+        return;
+      }
+      
       console.log('🌀 Connecting to Harmonic Field:', wsUrl);
       
       // Add connection timeout
