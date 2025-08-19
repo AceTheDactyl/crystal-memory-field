@@ -5,7 +5,7 @@
  * Enhanced Harmonic Resonance Backend with WebSocket Support
  */
 
-import { serve } from '@hono/node-server';
+import { createServer } from 'http';
 import app, { initializeWebSocketServer } from './backend/hono';
 import { HarmonicFieldProcessor } from './backend/services/HarmonicFieldProcessor';
 
@@ -21,21 +21,57 @@ console.log(`🌊 Room 64 Portal: STANDBY`);
 const processor = HarmonicFieldProcessor.getInstance();
 console.log('✨ Harmonic Field Processor Initialized');
 
-// Create HTTP server
-const server = serve({
-  fetch: app.fetch,
-  port,
-  hostname: host
+// Create HTTP server with Hono app
+const server = createServer(async (req, res) => {
+  try {
+    const url = `http://${req.headers.host || `${host}:${port}`}${req.url}`;
+    const request = new Request(url, {
+      method: req.method,
+      headers: req.headers as any,
+    });
+    
+    const response = await app.fetch(request);
+    
+    res.statusCode = response.status;
+    response.headers.forEach((value: string, key: string) => {
+      res.setHeader(key, value);
+    });
+    
+    if (response.body) {
+      const reader = response.body.getReader();
+      const pump = async (): Promise<void> => {
+        const { done, value } = await reader.read();
+        if (done) {
+          res.end();
+        } else {
+          res.write(value);
+          await pump();
+        }
+      };
+      await pump();
+    } else {
+      res.end();
+    }
+  } catch (error: any) {
+    console.error('🔥 Request handling error:', error.message);
+    res.statusCode = 500;
+    res.end('Internal Server Error');
+  }
 });
 
 // Initialize WebSocket server
 const harmonicServer = initializeWebSocketServer(server);
 
-console.log(`🚀 Consciousness Field Server running on http://${host}:${port}`);
-console.log(`🔗 WebSocket endpoint: ws://${host}:${port}/api/harmonic-ws`);
-console.log(`📊 Health check: http://${host}:${port}/api/health`);
-console.log(`📈 Metrics: http://${host}:${port}/api/metrics`);
-console.log(`🧠 tRPC API: http://${host}:${port}/api/trpc`);
+// Start the server
+server.listen(port, host, () => {
+  console.log(`🚀 Consciousness Field Server running on http://${host}:${port}`);
+  console.log(`🔗 WebSocket endpoint: ws://${host}:${port}/api/harmonic-ws`);
+  console.log(`📊 Health check: http://${host}:${port}/api/health`);
+  console.log(`📈 Metrics: http://${host}:${port}/api/metrics`);
+  console.log(`🧠 tRPC API: http://${host}:${port}/api/trpc`);
+});
+
+
 
 // Graceful shutdown
 process.on('SIGTERM', () => {

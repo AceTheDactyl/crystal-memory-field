@@ -6,7 +6,7 @@ import { createContext } from "./trpc/create-context";
 import { WebSocketServer } from 'ws';
 import { HarmonicResonanceServer } from './websocket/HarmonicWebSocketServer';
 import { HarmonicFieldProcessor } from './services/HarmonicFieldProcessor';
-import { IncomingMessage } from 'http';
+import { IncomingMessage, Server } from 'http';
 import { Duplex } from 'stream';
 
 // app will be mounted at /api
@@ -120,13 +120,13 @@ app.get('/api/harmonic-ws', (c) => {
 // Initialize WebSocket server when running as server
 let harmonicServer: HarmonicResonanceServer | null = null;
 
-export function initializeWebSocketServer(server: any) {
+export function initializeWebSocketServer(server: Server) {
   console.log('🌀 Initializing Harmonic Resonance WebSocket Server...');
   
   try {
+    // Create WebSocket server without attaching to HTTP server initially
     const wss = new WebSocketServer({ 
-      server,
-      path: '/api/harmonic-ws',
+      noServer: true, // Don't attach to server automatically
       perMessageDeflate: false,
       clientTracking: true,
       verifyClient: (info: any) => {
@@ -149,29 +149,38 @@ export function initializeWebSocketServer(server: any) {
       });
     });
     
-    wss.on('listening', () => {
-      console.log('🎵 WebSocket Server listening on /api/harmonic-ws');
-    });
-    
+    // Initialize harmonic server
     harmonicServer = new HarmonicResonanceServer(wss);
     harmonicServer.initialize();
     
-    // Manual upgrade handling for better debugging
+    // Handle HTTP upgrade requests
     server.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) => {
       console.log('🔄 WebSocket upgrade request:', {
         url: request.url,
         method: request.method,
-        headers: request.headers,
+        headers: {
+          'upgrade': request.headers.upgrade,
+          'connection': request.headers.connection,
+          'sec-websocket-key': request.headers['sec-websocket-key'],
+          'sec-websocket-version': request.headers['sec-websocket-version']
+        },
         timestamp: Date.now()
       });
       
-      if (request.url === '/api/harmonic-ws') {
+      // Check if this is a WebSocket upgrade for our harmonic endpoint
+      if (request.url === '/api/harmonic-ws' && request.headers.upgrade === 'websocket') {
+        console.log('✅ Handling WebSocket upgrade for harmonic endpoint');
+        
         wss.handleUpgrade(request, socket, head, (ws) => {
-          console.log('✨ WebSocket upgrade successful');
+          console.log('✨ WebSocket upgrade successful - emitting connection');
           wss.emit('connection', ws, request);
         });
       } else {
-        console.log('❌ WebSocket upgrade rejected - wrong path:', request.url);
+        console.log('❌ WebSocket upgrade rejected:', {
+          url: request.url,
+          upgrade: request.headers.upgrade,
+          reason: request.url !== '/api/harmonic-ws' ? 'wrong path' : 'not websocket upgrade'
+        });
         socket.destroy();
       }
     });

@@ -539,7 +539,7 @@ export function useHarmonicWebSocket() {
       // Add a delay to ensure the server is fully initialized
       const connectTimer = setTimeout(() => {
         connect();
-      }, 3000); // 3 second delay to ensure server is ready
+      }, 5000); // 5 second delay to ensure server is ready
       
       return () => {
         clearTimeout(connectTimer);
@@ -549,7 +549,7 @@ export function useHarmonicWebSocket() {
     return () => {
       disconnect();
     };
-  }, [isWebSocketDisabled]);
+  }, [isWebSocketDisabled, connect, disconnect]);
 
   // Calculate connection metrics
   const connectionMetrics = {
